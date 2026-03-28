@@ -13,22 +13,46 @@
 }
 .title-main {
   font-family: 'Fredoka', cursive;
-  font-size: 80px;
-  color: #F4C542;
-  text-shadow: 3px 5px 12px rgba(0,0,0,0.6);
-  margin-bottom: 24px;
-  line-height: 1.15;
+  font-size: 100px;
+  color: #fff;
+  text-shadow: 4px 5px 0px rgba(255,107,107,0.5), 2px 3px 12px rgba(0,0,0,0.4);
+  margin-bottom: 16px;
+  line-height: 1.1;
   max-width: 1500px;
 }
 .title-sub {
-  font-size: 32px;
-  color: rgba(255,255,255,0.65);
-  font-style: italic;
-  margin-bottom: 40px;
+  font-size: 36px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+  margin-bottom: 30px;
   text-shadow: 1px 2px 4px rgba(0,0,0,0.4);
 }
 .title-summary {
-  max-width: 1200px;
+  max-width: 1300px;
+}
+.title-summary .card {
+  background: rgba(255,255,255,0.92);
+  border: 3px solid rgba(255,217,61,0.4);
+}
+.title-summary .body-text {
+  color: #3a3a5c;
+  font-size: 36px;
+}
+.title-deco-left {
+  position: absolute;
+  bottom: 32px;
+  left: 32px;
+  font-size: 90px;
+  z-index: 3;
+  filter: drop-shadow(3px 3px 6px rgba(0,0,0,0.2));
+}
+.title-deco-right {
+  position: absolute;
+  bottom: 32px;
+  right: 32px;
+  font-size: 90px;
+  z-index: 3;
+  filter: drop-shadow(3px 3px 6px rgba(0,0,0,0.2));
 }
 {% endblock %}
 
@@ -49,4 +73,6 @@
   </div>
   {% endif %}
 </div>
+<div class="title-deco-left">🎬</div>
+<div class="title-deco-right">🌈</div>
 {% endblock %}

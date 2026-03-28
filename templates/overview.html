@@ -5,44 +5,45 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 20px;
+  gap: 18px;
 }
 .overview-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 22px;
+  gap: 20px;
   flex: 1;
   align-content: center;
 }
 .overview-card {
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  padding: 28px 32px;
+  background: rgba(255,255,255,0.85);
+  border: 3px solid rgba(77,150,255,0.15);
+  border-radius: 24px;
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.04);
 }
 .overview-card.full-width {
   grid-column: 1 / -1;
 }
 .overview-heading {
   font-family: 'Fredoka', cursive;
-  color: #F4C542;
-  font-size: 30px;
-  font-weight: 600;
-  margin-bottom: 14px;
+  color: #FF6B6B;
+  font-size: 38px;
+  font-weight: 700;
+  margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid rgba(244, 197, 66, 0.2);
+  border-bottom: 3px dashed rgba(255,107,107,0.2);
 }
 .overview-text {
-  font-size: 26px;
+  font-size: 32px;
   line-height: 1.5;
-  font-weight: 500;
+  font-weight: 600;
 }
 .objective-item {
-  font-size: 25px;
-  padding: 6px 0;
-  font-weight: 500;
+  font-size: 32px;
+  padding: 5px 0;
+  font-weight: 600;
 }
 .objective-item::before {
   content: '🎯 ';
@@ -57,21 +58,21 @@
   <div class="overview-grid">
     {% if story_summary %}
     <div class="overview-card">
-      <div class="overview-heading">📖 Story Summary</div>
+      <div class="overview-heading">📖 The Story</div>
       <p class="overview-text">{{ story_summary }}</p>
     </div>
     {% endif %}
 
     {% if moral %}
     <div class="overview-card">
-      <div class="overview-heading">💡 The Moral</div>
+      <div class="overview-heading">💡 Big Idea</div>
       <p class="overview-text">{{ moral }}</p>
     </div>
     {% endif %}
 
     {% if learning_objectives %}
     <div class="overview-card{% if not teaching_rationale %} full-width{% endif %}">
-      <div class="overview-heading">🎯 Learning Objectives</div>
+      <div class="overview-heading">🎯 What We Will Learn</div>
       {% for obj in learning_objectives %}
       <div class="objective-item">{{ obj }}</div>
       {% endfor %}
@@ -80,7 +81,7 @@
 
     {% if teaching_rationale %}
     <div class="overview-card">
-      <div class="overview-heading">📋 Teaching Rationale</div>
+      <div class="overview-heading">📋 Why This Matters</div>
       <p class="overview-text">{{ teaching_rationale }}</p>
     </div>
     {% endif %}

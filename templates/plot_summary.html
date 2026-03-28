@@ -3,7 +3,7 @@
 {% block extra_style %}
 .plot-layout {
   display: flex;
-  gap: 40px;
+  gap: 36px;
   height: 100%;
   align-items: center;
 }
@@ -14,14 +14,14 @@
   justify-content: center;
 }
 .plot-image-side {
-  flex: 0 0 340px;
+  flex: 0 0 480px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .plot-image-side img {
   max-width: 100%;
-  max-height: 90%;
+  max-height: 95%;
   object-fit: contain;
 }
 {% endblock %}
@@ -35,14 +35,14 @@
       <div class="flow-text">{{ bullet }}</div>
     </div>
     {% if not loop.last %}
-    <div class="flow-arrow">▼</div>
+    <div class="flow-arrow">⬇️</div>
     {% endif %}
     {% endfor %}
   </div>
   {% if frame_image %}
   <div class="plot-image-side">
     <div class="taped-photo">
-      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:12px;" />
+      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:18px;" />
     </div>
   </div>
   {% endif %}

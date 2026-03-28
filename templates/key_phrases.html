@@ -3,19 +3,19 @@
 {% block extra_style %}
 .phrases-layout {
   display: flex;
-  gap: 36px;
+  gap: 32px;
   height: 100%;
   align-items: center;
 }
 .phrases-frame-col {
-  flex: 0 0 300px;
+  flex: 0 0 420px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .phrases-frame-col img {
   max-width: 100%;
-  max-height: 90%;
+  max-height: 95%;
   object-fit: contain;
 }
 .phrases-container {
@@ -24,41 +24,42 @@
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
-  gap: 18px;
+  gap: 20px;
   padding: 20px;
 }
 .phrase-box {
   display: inline-block;
-  padding: 20px 34px;
-  border-radius: 16px;
-  font-size: 30px;
-  font-weight: 600;
+  padding: 22px 38px;
+  border-radius: 24px;
+  font-size: 38px;
+  font-weight: 700;
   line-height: 1.4;
   max-width: 100%;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.05);
 }
 .phrase-box:nth-child(6n+1) {
-  background: rgba(244, 197, 66, 0.15);
-  border: 2px solid rgba(244, 197, 66, 0.35);
+  background: rgba(255,217,61,0.2);
+  border: 3px solid rgba(255,217,61,0.45);
 }
 .phrase-box:nth-child(6n+2) {
-  background: rgba(232, 141, 103, 0.15);
-  border: 2px solid rgba(232, 141, 103, 0.35);
+  background: rgba(255,107,107,0.15);
+  border: 3px solid rgba(255,107,107,0.35);
 }
 .phrase-box:nth-child(6n+3) {
-  background: rgba(109, 211, 206, 0.15);
-  border: 2px solid rgba(109, 211, 206, 0.35);
+  background: rgba(107,203,119,0.15);
+  border: 3px solid rgba(107,203,119,0.35);
 }
 .phrase-box:nth-child(6n+4) {
-  background: rgba(196, 155, 255, 0.15);
-  border: 2px solid rgba(196, 155, 255, 0.35);
+  background: rgba(77,150,255,0.15);
+  border: 3px solid rgba(77,150,255,0.35);
 }
 .phrase-box:nth-child(6n+5) {
-  background: rgba(255, 167, 196, 0.15);
-  border: 2px solid rgba(255, 167, 196, 0.35);
+  background: rgba(255,167,196,0.2);
+  border: 3px solid rgba(255,167,196,0.4);
 }
 .phrase-box:nth-child(6n+6) {
-  background: rgba(130, 220, 130, 0.15);
-  border: 2px solid rgba(130, 220, 130, 0.35);
+  background: rgba(196,155,255,0.15);
+  border: 3px solid rgba(196,155,255,0.35);
 }
 {% endblock %}
 
@@ -67,7 +68,7 @@
   {% if frame_image %}
   <div class="phrases-frame-col">
     <div class="taped-photo">
-      <img src="{{ frame_image }}" class="frame-photo frame-rotated" style="border-radius:10px;" />
+      <img src="{{ frame_image }}" class="frame-photo frame-rotated" style="border-radius:16px;" />
     </div>
   </div>
   {% endif %}

@@ -7,6 +7,7 @@ services:
 
     volumes:
       - .:/app
+      - hf-cache:/root/.cache/huggingface
 
     working_dir: /app
 
@@ -15,3 +16,6 @@ services:
 
     # Example: docker compose run --rm whisper python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
     command:  python cartoon_to_slides.py --video input/1.mp4 --work-dir output --skip-transcribe --skip-frames --out output/lesson.pptx
+
+volumes:
+  hf-cache:

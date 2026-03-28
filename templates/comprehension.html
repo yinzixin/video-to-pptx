@@ -3,56 +3,64 @@
 {% block extra_style %}
 .comp-layout {
   display: flex;
-  gap: 32px;
+  gap: 28px;
   height: 100%;
   align-items: center;
 }
-.qa-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  justify-content: center;
-}
-.qa-pair {
-  background: rgba(255,255,255,0.05);
-  border-radius: 14px;
-  padding: 16px 26px;
-  border-left: 4px solid rgba(244, 197, 66, 0.4);
-}
-.qa-q {
-  font-size: 28px;
-  font-weight: 700;
-  color: #F4C542;
-  line-height: 1.4;
-}
-.qa-q::before {
-  content: '❓ ';
-  font-size: 24px;
-}
-.qa-a {
-  font-size: 25px;
-  color: rgba(255,255,255,0.65);
-  font-style: italic;
-  line-height: 1.4;
-  margin-top: 4px;
-  padding-left: 38px;
-}
 .comp-frame-col {
-  flex: 0 0 300px;
+  flex: 0 0 420px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .comp-frame-col img {
   max-width: 100%;
-  max-height: 90%;
+  max-height: 95%;
   object-fit: contain;
+}
+.qa-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+}
+.qa-pair {
+  background: rgba(255,255,255,0.85);
+  border-radius: 22px;
+  padding: 18px 28px;
+  border-left: 7px solid rgba(255,107,107,0.5);
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.04);
+}
+.qa-q {
+  font-size: 36px;
+  font-weight: 700;
+  color: #FF6B6B;
+  line-height: 1.4;
+}
+.qa-q::before {
+  content: '❓ ';
+  font-size: 30px;
+}
+.qa-a {
+  font-size: 30px;
+  color: rgba(58,58,92,0.55);
+  font-style: italic;
+  line-height: 1.4;
+  margin-top: 6px;
+  padding-left: 44px;
 }
 {% endblock %}
 
 {% block content %}
 <div class="comp-layout">
+  {% if frame_image %}
+  <div class="comp-frame-col">
+    <div class="pinned-photo">
+      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:16px;" />
+    </div>
+  </div>
+  {% endif %}
   <div class="qa-container">
     {% for pair in qa_pairs %}
     <div class="qa-pair">
@@ -71,12 +79,5 @@
     {% endfor %}
     {% endif %}
   </div>
-  {% if frame_image %}
-  <div class="comp-frame-col">
-    <div class="pinned-photo">
-      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:10px;" />
-    </div>
-  </div>
-  {% endif %}
 </div>
 {% endblock %}

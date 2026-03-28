@@ -15,14 +15,14 @@ from slide_plan import SlidePlan
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
 SECTION_TAGS: dict[str, str] = {
-    "story_intro": "Meet the Characters",
-    "plot_summary": "What Happens",
-    "key_scene": "Key Scene",
-    "vocabulary": "Word Bank",
-    "key_phrases": "Useful Expressions",
-    "comprehension": "Check Understanding",
-    "moral_lesson": "The Lesson",
-    "discussion": "Let's Discuss",
+    "story_intro": "🌟 Meet the Friends!",
+    "plot_summary": "📖 The Story!",
+    "key_scene": "🎬 Cool Moment!",
+    "vocabulary": "📚 New Words!",
+    "key_phrases": "💬 Say This!",
+    "comprehension": "🧩 Quiz Time!",
+    "moral_lesson": "💡 Big Idea!",
+    "discussion": "🗣️ Your Turn!",
 }
 
 

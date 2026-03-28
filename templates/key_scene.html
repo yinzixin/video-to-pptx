@@ -3,86 +3,83 @@
 {% block extra_style %}
 .scene-layout {
   display: flex;
-  flex-direction: column;
+  gap: 32px;
   height: 100%;
-  gap: 14px;
+  align-items: stretch;
 }
-.scene-top {
+.scene-image-col {
+  flex: 0 0 55%;
   display: flex;
-  gap: 28px;
+  flex-direction: column;
   align-items: center;
-  flex-shrink: 0;
+  justify-content: center;
+  gap: 12px;
 }
 .scene-image-wrap {
-  flex: 0 0 auto;
   padding: 10px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 10px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 20px;
+  border: 3px solid rgba(77,150,255,0.15);
+  max-width: 100%;
 }
 .scene-image-wrap img {
-  max-height: 220px;
-  max-width: 360px;
-  border-radius: 6px;
+  max-height: 420px;
+  max-width: 100%;
+  border-radius: 14px;
   display: block;
 }
-.scene-context {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  justify-content: center;
-}
 .scene-context-item {
-  font-size: 24px;
-  color: rgba(255,255,255,0.7);
-  font-weight: 500;
+  font-size: 30px;
+  color: rgba(58,58,92,0.7);
+  font-weight: 600;
   line-height: 1.4;
+  text-align: center;
+  padding: 4px 16px;
 }
-.scene-dialogue-area {
+.scene-text-col {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   overflow: hidden;
   justify-content: center;
 }
 .bubble-left {
   align-self: flex-start;
-  max-width: 75%;
+  max-width: 95%;
+  border-color: rgba(77,150,255,0.25);
 }
 .bubble-right {
   align-self: flex-end;
-  max-width: 75%;
-  background: rgba(244, 197, 66, 0.08);
-  border-color: rgba(244, 197, 66, 0.2);
+  max-width: 95%;
+  background: rgba(255,217,61,0.15);
+  border-color: rgba(255,217,61,0.35);
 }
 {% endblock %}
 
 {% block content %}
 <div class="scene-layout">
-  <div class="scene-top">
+  <div class="scene-image-col">
     {% if frame_image %}
     <div class="scene-image-wrap">
       <img src="{{ frame_image }}" />
     </div>
     {% endif %}
     {% if bullets %}
-    <div class="scene-context">
-      {% for bullet in bullets %}
-      <div class="scene-context-item">{{ bullet }}</div>
-      {% endfor %}
-    </div>
+    {% for bullet in bullets %}
+    <div class="scene-context-item">{{ bullet }}</div>
+    {% endfor %}
     {% endif %}
   </div>
-  {% if scene_dialogue %}
-  <div class="scene-dialogue-area">
+  <div class="scene-text-col">
+    {% if scene_dialogue %}
     {% for dl in scene_dialogue %}
     <div class="speech-bubble {% if loop.index is odd %}bubble-left{% else %}bubble-right{% endif %}">
       <div class="speaker-name">{{ dl.speaker }}</div>
       <div class="speaker-line">{{ dl.line }}</div>
     </div>
     {% endfor %}
+    {% endif %}
   </div>
-  {% endif %}
 </div>
 {% endblock %}

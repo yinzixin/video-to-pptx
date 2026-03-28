@@ -3,19 +3,19 @@
 {% block extra_style %}
 .disc-layout {
   display: flex;
-  gap: 36px;
+  gap: 32px;
   height: 100%;
   align-items: center;
 }
 .disc-frame-col {
-  flex: 0 0 300px;
+  flex: 0 0 420px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .disc-frame-col img {
   max-width: 100%;
-  max-height: 90%;
+  max-height: 95%;
   object-fit: contain;
 }
 .discussion-layout {
@@ -23,28 +23,30 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 16px;
+  gap: 20px;
   padding: 10px 0;
 }
 .discussion-item {
   padding: 22px 32px;
-  font-size: 30px;
-  border-radius: 24px;
-  max-width: 90%;
+  font-size: 38px;
+  font-weight: 700;
+  border-radius: 26px;
+  max-width: 95%;
+  box-shadow: 3px 3px 0px rgba(0,0,0,0.04);
 }
 .discussion-item::before {
   content: '💬 ';
-  font-size: 24px;
+  font-size: 30px;
 }
 .discussion-item:nth-child(odd) {
   align-self: flex-start;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.85);
+  border: 3px solid rgba(77,150,255,0.2);
 }
 .discussion-item:nth-child(even) {
   align-self: flex-end;
-  background: rgba(244, 197, 66, 0.08);
-  border: 1px solid rgba(244, 197, 66, 0.15);
+  background: rgba(255,217,61,0.15);
+  border: 3px solid rgba(255,217,61,0.3);
 }
 {% endblock %}
 
@@ -53,7 +55,7 @@
   {% if frame_image %}
   <div class="disc-frame-col">
     <div class="taped-photo">
-      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:10px; transform:rotate(-3deg);" />
+      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:16px; transform:rotate(-3deg);" />
     </div>
   </div>
   {% endif %}
