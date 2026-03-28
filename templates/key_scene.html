@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+.scene-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 20px;
+}
+.scene-top {
+  display: flex;
+  gap: 30px;
+  align-items: start;
+}
+.scene-image-wrap {
+  flex: 0 0 auto;
+  position: relative;
+  padding: 12px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+}
+.scene-image-wrap img {
+  max-height: 280px;
+  border-radius: 6px;
+}
+.scene-context {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scene-context-item {
+  font-size: 22px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 500;
+}
+.scene-dialogue-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+.bubble-left {
+  align-self: flex-start;
+  max-width: 80%;
+}
+.bubble-right {
+  align-self: flex-end;
+  max-width: 80%;
+  background: rgba(244, 197, 66, 0.08);
+  border-color: rgba(244, 197, 66, 0.2);
+}
+{% endblock %}
+
+{% block content %}
+<div class="scene-layout">
+  <div class="scene-top">
+    {% if frame_image %}
+    <div class="scene-image-wrap">
+      <img src="{{ frame_image }}" />
+    </div>
+    {% endif %}
+    {% if bullets %}
+    <div class="scene-context">
+      {% for bullet in bullets %}
+      <div class="scene-context-item">{{ bullet }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% if scene_dialogue %}
+  <div class="scene-dialogue-area">
+    {% for dl in scene_dialogue %}
+    <div class="speech-bubble {% if loop.index is odd %}bubble-left{% else %}bubble-right{% endif %}">
+      <div class="speaker-name">{{ dl.speaker }}</div>
+      <div class="speaker-line">{{ dl.line }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

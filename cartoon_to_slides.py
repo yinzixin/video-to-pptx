@@ -9,15 +9,16 @@ import os
 import sys
 import time
 
-from build_pptx import build_presentation
+from build_pptx import build_presentation_from_images, build_presentation_legacy
 from extract_frames import (
     FrameStrategy,
     extract_frames,
     load_manifest,
     prepare_frames_for_vision,
 )
+from generate_illustrations import generate_illustrations, map_illustrations_to_plan
+from render_slides import render_slides
 from slide_plan import generate_slide_plan
-from transcribe import save_transcript_json, transcribe_video
 
 
 def parse_args() -> argparse.Namespace:
@@ -123,6 +124,28 @@ def parse_args() -> argparse.Namespace:
         help="Max frames to encode for Vision API (default: 8)",
     )
 
+    # DALL-E illustrations
+    p.add_argument(
+        "--no-illustrations",
+        action="store_true",
+        default=False,
+        help="Skip DALL-E illustration generation (faster, cheaper)",
+    )
+    p.add_argument(
+        "--dalle-model",
+        default="dall-e-3",
+        help="DALL-E model for illustrations (default: dall-e-3)",
+    )
+
+    # Renderer choice
+    p.add_argument(
+        "--legacy-renderer",
+        action="store_true",
+        default=False,
+        help="Use the legacy python-pptx text renderer instead of the rich "
+        "HTML+Playwright pipeline",
+    )
+
     p.add_argument(
         "--skip-transcribe",
         action="store_true",
@@ -144,6 +167,8 @@ def _fmt_secs(seconds: float) -> str:
 
 
 def main() -> int:
+    from transcribe import save_transcript_json, transcribe_video
+
     args = parse_args()
     t0 = time.perf_counter()
     video = os.path.abspath(args.video)
@@ -156,6 +181,8 @@ def main() -> int:
     transcript_path = os.path.join(work, "transcript.json")
     frames_dir = os.path.join(work, "frames")
     manifest_path = os.path.join(frames_dir, "frames_manifest.json")
+
+    renderer_name = "legacy (python-pptx)" if args.legacy_renderer else "rich (HTML+Playwright)"
 
     print("[cartoon_to_slides] Starting pipeline", flush=True)
     print(f"  Video:     {video}", flush=True)
@@ -181,6 +208,11 @@ def main() -> int:
         f" (max_frames={args.max_vision_frames})",
         flush=True,
     )
+    print(
+        f"  DALL-E:    {'disabled' if args.no_illustrations else args.dalle_model}",
+        flush=True,
+    )
+    print(f"  Renderer:  {renderer_name}", flush=True)
     print(
         f"  Skip:      transcribe={args.skip_transcribe}, frames={args.skip_frames}",
         flush=True,
@@ -331,17 +363,68 @@ def main() -> int:
         f.write(json.dumps(plan.model_dump(), indent=2, ensure_ascii=False))
     print(f"{step}: validated slide plan saved to {plan_path}", flush=True)
 
-    # --- 4. PPTX ---
-    step = "[4/4] PowerPoint"
-    print(f"{step}: building .pptx…", flush=True)
-    t_step = time.perf_counter()
+    # --- 4. Build PPTX ---
     out_pptx = os.path.abspath(args.out)
     base = os.path.basename(video)
-    build_presentation(plan, manifest, base, out_pptx)
-    print(
-        f"{step}: saved {out_pptx} in {_fmt_secs(time.perf_counter() - t_step)}",
-        flush=True,
-    )
+
+    if args.legacy_renderer:
+        step = "[4/4] PowerPoint (legacy)"
+        print(f"{step}: building .pptx with text renderer…", flush=True)
+        t_step = time.perf_counter()
+        build_presentation_legacy(plan, manifest, base, out_pptx)
+        print(
+            f"{step}: saved {out_pptx} in "
+            f"{_fmt_secs(time.perf_counter() - t_step)}",
+            flush=True,
+        )
+    else:
+        # --- 3b. DALL-E illustrations ---
+        illustration_map = None
+        if not args.no_illustrations:
+            step = "[3b/4] Illustrations (DALL-E)"
+            print(f"{step}: generating with {args.dalle_model!r}…", flush=True)
+            t_step = time.perf_counter()
+            illustrations_dir = os.path.join(work, "illustrations")
+            illustrations = generate_illustrations(
+                plan,
+                illustrations_dir,
+                dalle_model=args.dalle_model,
+            )
+            illustration_map = map_illustrations_to_plan(plan, illustrations)
+            print(
+                f"{step}: done in {_fmt_secs(time.perf_counter() - t_step)} "
+                f"({len(illustrations)} images)",
+                flush=True,
+            )
+
+        # --- 3c+3d. Render HTML slides + Playwright screenshots ---
+        step = "[3c/4] Render slides"
+        print(f"{step}: rendering HTML + Playwright screenshots…", flush=True)
+        t_step = time.perf_counter()
+        rendered_dir = os.path.join(work, "rendered_slides")
+        slide_images = render_slides(
+            plan,
+            manifest,
+            illustration_map,
+            base,
+            rendered_dir,
+        )
+        print(
+            f"{step}: done in {_fmt_secs(time.perf_counter() - t_step)} "
+            f"({len(slide_images)} slides rendered)",
+            flush=True,
+        )
+
+        # --- 4. Assemble PPTX from images ---
+        step = "[4/4] PowerPoint (rich)"
+        print(f"{step}: assembling .pptx from rendered images…", flush=True)
+        t_step = time.perf_counter()
+        build_presentation_from_images(slide_images, plan.lesson_title, out_pptx)
+        print(
+            f"{step}: saved {out_pptx} in "
+            f"{_fmt_secs(time.perf_counter() - t_step)}",
+            flush=True,
+        )
 
     print(
         f"\n[cartoon_to_slides] Finished in {_fmt_secs(time.perf_counter() - t0)} total.",

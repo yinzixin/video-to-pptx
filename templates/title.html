@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+.title-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+}
+.title-main {
+  font-family: 'Fredoka', cursive;
+  font-size: 76px;
+  color: #F4C542;
+  text-shadow: 3px 4px 10px rgba(0,0,0,0.4);
+  margin-bottom: 24px;
+  line-height: 1.15;
+  max-width: 1400px;
+}
+.title-sub {
+  font-size: 30px;
+  color: rgba(255,255,255,0.55);
+  font-style: italic;
+  margin-bottom: 36px;
+}
+.title-summary {
+  max-width: 1200px;
+}
+.title-frame {
+  position: absolute;
+  bottom: 60px;
+  right: 80px;
+  opacity: 0.25;
+  border-radius: 16px;
+  max-width: 300px;
+  max-height: 200px;
+}
+{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block content %}
+<div class="title-center">
+  <h1 class="title-main">{{ lesson_title }}</h1>
+  <p class="title-sub">{{ subtitle }}</p>
+  {% if story_summary %}
+  <div class="title-summary">
+    <div class="card card-accent">
+      <p class="body-text" style="text-align:left;">{{ story_summary }}</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% if frame_image %}
+<img src="{{ frame_image }}" class="title-frame" />
+{% endif %}
+{% endblock %}

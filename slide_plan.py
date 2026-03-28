@@ -36,6 +36,9 @@ class VocabItem(BaseModel):
     pos: str = Field("", description="Part of speech (noun, verb, adj …)")
     definition: str = ""
     example: str = Field("", description="Sentence from the episode")
+    illustration_prompt: str = Field(
+        "", description="Short DALL-E prompt for a cartoon illustration of this word"
+    )
 
 
 class DialogueLine(BaseModel):
@@ -50,6 +53,9 @@ class SlideSpec(BaseModel):
     vocab_items: list[VocabItem] | None = None
     scene_dialogue: list[DialogueLine] | None = None
     teacher_notes: str | None = None
+    illustration_prompt: str = Field(
+        "", description="Short DALL-E prompt for a cartoon illustration for this slide"
+    )
     frame_index: int = Field(
         0, ge=0, description="Index into the frames list (0‑based)"
     )
@@ -166,6 +172,27 @@ labels such as "Narrator", "Character 1", etc.
    • `teacher_notes`: suggested format (pair / group / class).
 
 ─────────────────────────────────────────────────────
+ILLUSTRATION PROMPTS
+─────────────────────────────────────────────────────
+
+For slides of type story_intro, key_scene, and moral_lesson, provide an \
+`illustration_prompt` field on the slide object: a short English description \
+for generating a cartoon illustration of the scene or concept.
+
+For each vocabulary item, also provide an `illustration_prompt` describing a \
+simple cartoon of the word's meaning.
+
+Style guide for ALL illustration prompts — always include this suffix: \
+"cute cartoon style, simple flat design, bright colors, white background, \
+no text, suitable for children".
+
+Examples:
+- "a musical xylophone with colorful bars, cute cartoon style, simple flat \
+design, bright colors, white background, no text, suitable for children"
+- "a dog frozen in place looking surprised, cute cartoon style, simple flat \
+design, bright colors, white background, no text, suitable for children"
+
+─────────────────────────────────────────────────────
 RULES
 ─────────────────────────────────────────────────────
 • Ground ALL content in the provided transcript — never invent dialogue or events.
@@ -258,10 +285,12 @@ def build_user_payload(
         "  - `title` (string)\n"
         "  - `bullets` (array of strings)\n"
         "  - `vocab_items` (array, vocabulary slides only): "
-        "[{word, pos, definition, example}]\n"
+        "[{word, pos, definition, example, illustration_prompt}]\n"
         "  - `scene_dialogue` (array, key_scene slides only): "
         "[{speaker, line}]\n"
         "  - `teacher_notes` (string, optional)\n"
+        "  - `illustration_prompt` (string, optional): DALL-E prompt for a "
+        "cartoon illustration of the slide concept\n"
         "  - `frame_index` (int)\n"
     )
     return "\n".join(parts)

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+.vocab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  height: 100%;
+  align-content: start;
+}
+.vocab-card {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  background: rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 16px 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: background 0.2s;
+}
+.vocab-card:nth-child(4n+1) { border-left: 4px solid #F4C542; }
+.vocab-card:nth-child(4n+2) { border-left: 4px solid #E88D67; }
+.vocab-card:nth-child(4n+3) { border-left: 4px solid #6DD3CE; }
+.vocab-card:nth-child(4n+4) { border-left: 4px solid #C49BFF; }
+.vocab-info { flex: 1; }
+{% endblock %}
+
+{% block content %}
+<div class="vocab-grid">
+  {% for item in vocab_items %}
+  <div class="vocab-card">
+    {% if item.illustration %}
+    <img src="{{ item.illustration }}" class="vocab-illustration" />
+    {% endif %}
+    <div class="vocab-info">
+      <div>
+        <span class="vocab-word">{{ item.word }}</span>
+        {% if item.pos %}<span class="vocab-pos">({{ item.pos }})</span>{% endif %}
+      </div>
+      <div class="vocab-definition">{{ item.definition }}</div>
+      {% if item.example %}
+      <div class="vocab-example">"{{ item.example }}"</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

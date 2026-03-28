@@ -553,12 +553,13 @@ def _add_overview_slide(
 # ---------------------------------------------------------------------------
 
 
-def build_presentation(
+def build_presentation_legacy(
     plan: SlidePlan,
     frames_manifest: dict[str, Any],
     video_basename: str,
     out_path: str,
 ) -> None:
+    """Original text-based renderer (kept as --legacy-renderer fallback)."""
     frames = frames_manifest.get("frames", [])
     prs = Presentation()
     prs.slide_width = SLIDE_W
@@ -582,6 +583,28 @@ def build_presentation(
 
         renderer = _RENDERERS.get(spec.slide_type, _render_generic)
         renderer(prs, spec, img_path)
+
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    prs.save(out_path)
+
+
+def build_presentation_from_images(
+    slide_images: list[str],
+    lesson_title: str,
+    out_path: str,
+) -> None:
+    """Assemble a PPTX by embedding pre-rendered PNG images as full-slide pictures."""
+    prs = Presentation()
+    prs.slide_width = SLIDE_W
+    prs.slide_height = SLIDE_H
+
+    blank_idx = 6 if len(prs.slide_layouts) > 6 else len(prs.slide_layouts) - 1
+
+    for img_path in slide_images:
+        if not os.path.isfile(img_path):
+            continue
+        slide = prs.slides.add_slide(prs.slide_layouts[blank_idx])
+        slide.shapes.add_picture(img_path, 0, 0, SLIDE_W, SLIDE_H)
 
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     prs.save(out_path)

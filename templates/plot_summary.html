@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block extra_style %}
+.plot-layout {
+  display: flex;
+  gap: 36px;
+  height: 100%;
+}
+.plot-flow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.plot-image-side {
+  flex: 0 0 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plot-image-side img {
+  max-width: 100%;
+  max-height: 90%;
+  object-fit: contain;
+}
+{% endblock %}
+
+{% block content %}
+<div class="plot-layout">
+  <div class="plot-flow">
+    {% for bullet in bullets %}
+    <div class="flow-step">
+      <div class="flow-number">{{ loop.index }}</div>
+      <div class="flow-text">{{ bullet }}</div>
+    </div>
+    {% if not loop.last %}
+    <div class="flow-arrow">▼</div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% if frame_image %}
+  <div class="plot-image-side">
+    <img src="{{ frame_image }}" class="frame-photo" style="border-radius:16px;" />
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
