@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+{% block title %}Projects - Cartoon-to-Slides{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Projects</h1>
+  <button class="btn btn-primary" onclick="document.getElementById('create-modal').classList.add('active')">
+    + New Project
+  </button>
+</div>
+
+{% if projects %}
+<div class="project-grid">
+  {% for p in projects %}
+  <a href="/projects/{{ p.id }}" class="project-card">
+    <div class="card-thumb">
+      {% if thumbnails[p.id] %}
+      <img src="{{ thumbnails[p.id] }}" alt="Thumbnail">
+      {% else %}
+      <div class="card-thumb-placeholder">No video</div>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <h3>{{ p.name }}</h3>
+      <div class="card-meta">
+        <span class="status-badge status-{{ p.status.value }}">{{ p.status.value }}</span>
+        <span class="card-date">{{ p.created_at[:10] }}</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>No projects yet. Create one to get started.</p>
+</div>
+{% endif %}
+
+<!-- Create Project Modal -->
+<div id="create-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>New Project</h2>
+      <button class="btn-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+    </div>
+    <form method="POST" action="/api/projects">
+      <div class="form-group">
+        <label for="name">Project Name</label>
+        <input type="text" id="name" name="name" required placeholder="e.g. Bluey S1E01 Lesson" autofocus>
+      </div>
+
+      <details class="form-details">
+        <summary>Advanced Settings</summary>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="openai_model">OpenAI Model</label>
+            <input type="text" id="openai_model" name="openai_model" value="gpt-5.4">
+          </div>
+          <div class="form-group">
+            <label for="reasoning_effort">Reasoning Effort</label>
+            <select id="reasoning_effort" name="reasoning_effort">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="max_slides">Max Slides</label>
+            <input type="number" id="max_slides" name="max_slides" value="12" min="1" max="30">
+          </div>
+          <div class="form-group">
+            <label for="whisper_model">Whisper Model</label>
+            <input type="text" id="whisper_model" name="whisper_model" value="base">
+          </div>
+          <div class="form-group">
+            <label for="dalle_model">DALL-E Model</label>
+            <input type="text" id="dalle_model" name="dalle_model" value="dall-e-3">
+          </div>
+          <div class="form-group">
+            <label for="audience">Target Audience</label>
+            <input type="text" id="audience" name="audience" placeholder="e.g. kids aged 8-10, A2">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" name="no_illustrations" value="1">
+              Skip DALL-E illustrations
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" name="no_vision" value="1">
+              Disable Vision API
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <div class="form-actions">
+        <button type="button" class="btn" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Project</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

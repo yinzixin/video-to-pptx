@@ -1,0 +1,133 @@
+{% extends "layout.html" %}
+{% block title %}Edit HTML Slides - {{ project.name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/dracula.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="/" class="breadcrumb">Projects</a> /
+    <a href="/projects/{{ project.id }}" class="breadcrumb">{{ project.name }}</a> /
+    <span>Edit HTML Slides</span>
+    <h1>Edit HTML Slides</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="rerenderAll()">Re-render All &amp; Rebuild PPTX</button>
+  </div>
+</div>
+
+<div class="slide-selector">
+  {% for s in slides %}
+  <button class="slide-tab {% if loop.first %}active{% endif %}"
+          data-idx="{{ s.index }}" onclick="selectSlide({{ s.index }}, this)">
+    <img src="/api/projects/{{ project.id }}/assets/slides/{{ s.index }}" alt="Slide {{ s.index + 1 }}" loading="lazy">
+    <span>{{ s.index + 1 }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+<div class="editor-split">
+  <div class="editor-pane">
+    <div class="pane-header">
+      <h3>HTML Source</h3>
+      <button class="btn btn-sm" onclick="saveCurrentSlide()">Save</button>
+    </div>
+    <textarea id="html-editor"></textarea>
+  </div>
+  <div class="editor-pane">
+    <h3>Preview</h3>
+    <div class="preview-frame-wrapper">
+      <iframe id="html-preview" sandbox="allow-same-origin"></iframe>
+    </div>
+  </div>
+</div>
+
+<div id="editor-status" class="editor-status"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/css/css.min.js"></script>
+<script>
+const PROJECT_ID = '{{ project.id }}';
+let currentIdx = {{ slides[0].index if slides else 0 }};
+
+const cm = CodeMirror.fromTextArea(document.getElementById('html-editor'), {
+  mode: 'htmlmixed',
+  theme: 'dracula',
+  lineNumbers: true,
+  lineWrapping: true,
+  tabSize: 2,
+});
+
+cm.on('change', debounce(() => {
+  updatePreview(cm.getValue());
+}, 500));
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function updatePreview(html) {
+  const iframe = document.getElementById('html-preview');
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+}
+
+function showStatus(msg, isError) {
+  const el = document.getElementById('editor-status');
+  el.textContent = msg;
+  el.className = 'editor-status ' + (isError ? 'error' : 'success');
+  setTimeout(() => el.textContent = '', 4000);
+}
+
+async function selectSlide(idx, btn) {
+  document.querySelectorAll('.slide-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentIdx = idx;
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/assets/slides/${idx}/html`);
+  if (!resp.ok) { showStatus('Failed to load slide', true); return; }
+  const data = await resp.json();
+  cm.setValue(data.html);
+  updatePreview(data.html);
+}
+
+async function saveCurrentSlide() {
+  const html = cm.getValue();
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/assets/slides/${currentIdx}/html`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({html}),
+  });
+  if (resp.ok) {
+    showStatus(`Slide ${currentIdx + 1} saved.`);
+  } else {
+    showStatus('Save failed', true);
+  }
+}
+
+async function rerenderAll() {
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/rerender`, {method: 'POST'});
+  if (resp.ok) {
+    showStatus('Re-rendering all slides...');
+    connectSSE(PROJECT_ID);
+  } else {
+    showStatus('Failed to start re-render', true);
+  }
+}
+
+// Load first slide
+{% if slides %}
+selectSlide({{ slides[0].index }}, document.querySelector('.slide-tab'));
+{% endif %}
+</script>
+{% endblock %}

@@ -3,31 +3,45 @@
 {% block extra_style %}
 .plot-layout {
   display: flex;
-  gap: 36px;
+  gap: 40px;
   height: 100%;
+  align-items: stretch;
+}
+.plot-image-side {
+  flex: 0 0 55%;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+}
+.plot-image-side .taped-photo {
+  max-width: 100%;
+  max-height: 100%;
+}
+.plot-image-side img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
 }
 .plot-flow {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-}
-.plot-image-side {
-  flex: 0 0 480px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.plot-image-side img {
-  max-width: 100%;
-  max-height: 95%;
-  object-fit: contain;
+  gap: 6px;
 }
 {% endblock %}
 
 {% block content %}
 <div class="plot-layout">
+  {% if frame_image %}
+  <div class="plot-image-side">
+    <div class="taped-photo">
+      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:18px;" />
+    </div>
+  </div>
+  {% endif %}
   <div class="plot-flow">
     {% for bullet in bullets %}
     <div class="flow-step">
@@ -39,12 +53,5 @@
     {% endif %}
     {% endfor %}
   </div>
-  {% if frame_image %}
-  <div class="plot-image-side">
-    <div class="taped-photo">
-      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:18px;" />
-    </div>
-  </div>
-  {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,170 @@
+{% extends "layout.html" %}
+{% block title %}{{ project.name }} - Cartoon-to-Slides{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="/" class="breadcrumb">Projects</a> / <span>{{ project.name }}</span>
+    <h1>{{ project.name }}</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-danger btn-sm" onclick="deleteProject('{{ project.id }}')">Delete</button>
+  </div>
+</div>
+
+<!-- Pipeline Status -->
+<section class="card pipeline-card">
+  <h2>Pipeline</h2>
+  <div class="pipeline-steps" id="pipeline-steps">
+    {% for step in steps %}
+    {% set state = project.pipeline.get(step.value, {}) %}
+    {% if state is mapping %}
+      {% set step_status = state.get('status', 'pending') %}
+      {% set step_msg = state.get('message', '') %}
+    {% else %}
+      {% set step_status = state.status if state else 'pending' %}
+      {% set step_msg = state.message if state else '' %}
+    {% endif %}
+    <div class="step step-{{ step_status }}" data-step="{{ step.value }}" id="step-{{ step.value }}">
+      <div class="step-indicator">
+        {% if step_status == 'done' %}
+          <span class="step-icon">&#10003;</span>
+        {% elif step_status == 'running' %}
+          <span class="step-icon spinning">&#9881;</span>
+        {% elif step_status == 'error' %}
+          <span class="step-icon">&#10007;</span>
+        {% else %}
+          <span class="step-icon">&#9675;</span>
+        {% endif %}
+      </div>
+      <div class="step-label">{{ step.value | replace('_', ' ') | title }}</div>
+      <div class="step-message">{{ step_msg }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Actions -->
+<section class="card">
+  <h2>Actions</h2>
+  <div class="action-bar">
+    {% if not has_video %}
+    <form method="POST" action="/api/projects/{{ project.id }}/upload" enctype="multipart/form-data" class="upload-form">
+      <label class="btn btn-primary upload-label">
+        Upload Video
+        <input type="file" name="file" accept="video/*" onchange="this.form.submit()" hidden>
+      </label>
+    </form>
+    {% else %}
+    <button class="btn btn-primary" onclick="runPipeline('{{ project.id }}')" {% if is_running %}disabled{% endif %}>
+      {% if is_running %}Running...{% else %}Run Full Pipeline{% endif %}
+    </button>
+    {% endif %}
+
+    {% if has_plan %}
+    <button class="btn" onclick="runFrom('{{ project.id }}', 'render')" {% if is_running %}disabled{% endif %}>
+      Re-render Slides
+    </button>
+    <button class="btn" onclick="runFrom('{{ project.id }}', 'plan')" {% if is_running %}disabled{% endif %}>
+      Re-generate from Plan
+    </button>
+    {% endif %}
+
+    {% if has_pptx %}
+    <a href="/api/projects/{{ project.id }}/download" class="btn btn-success">Download PPTX</a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Video Preview -->
+{% if has_video %}
+<section class="card">
+  <h2>Video</h2>
+  <video controls class="video-preview" preload="metadata">
+    <source src="/api/projects/{{ project.id }}/assets/video" type="video/mp4">
+  </video>
+  <p class="text-muted">{{ project.video_filename or 'video.mp4' }}</p>
+</section>
+{% endif %}
+
+<!-- Edit Tools -->
+{% if has_plan %}
+<section class="card">
+  <h2>Edit &amp; Refine</h2>
+  <div class="action-bar">
+    <a href="/projects/{{ project.id }}/edit/plan" class="btn">Edit Slide Plan</a>
+    {% if slide_count > 0 %}
+    <a href="/projects/{{ project.id }}/edit/html" class="btn">Edit HTML Slides</a>
+    {% endif %}
+    {% if frame_count > 0 %}
+    <a href="/projects/{{ project.id }}/edit/frames" class="btn">Manage Frames</a>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<!-- Rendered Slides Preview -->
+{% if slide_count > 0 %}
+<section class="card">
+  <h2>Rendered Slides ({{ slide_count }})</h2>
+  <div class="slides-carousel" id="slides-carousel">
+    {% for i in range(slide_count) %}
+    <div class="slide-thumb" onclick="showSlideModal({{ i }}, {{ slide_count }})">
+      <img src="/api/projects/{{ project.id }}/assets/slides/{{ i }}" alt="Slide {{ i + 1 }}" loading="lazy">
+      <span class="slide-num">{{ i + 1 }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- Slide Full View Modal -->
+<div id="slide-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2 id="slide-modal-title">Slide</h2>
+      <button class="btn-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+    </div>
+    <div class="slide-viewer">
+      <button class="slide-nav slide-prev" onclick="navigateSlide(-1)">&#8249;</button>
+      <img id="slide-modal-img" src="" alt="Slide">
+      <button class="slide-nav slide-next" onclick="navigateSlide(1)">&#8250;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROJECT_ID = '{{ project.id }}';
+const SLIDE_COUNT = {{ slide_count }};
+let currentSlide = 0;
+
+function showSlideModal(idx, total) {
+  currentSlide = idx;
+  updateSlideModal();
+  document.getElementById('slide-modal').classList.add('active');
+}
+
+function updateSlideModal() {
+  document.getElementById('slide-modal-title').textContent = `Slide ${currentSlide + 1} / ${SLIDE_COUNT}`;
+  document.getElementById('slide-modal-img').src = `/api/projects/${PROJECT_ID}/assets/slides/${currentSlide}`;
+}
+
+function navigateSlide(dir) {
+  currentSlide = Math.max(0, Math.min(SLIDE_COUNT - 1, currentSlide + dir));
+  updateSlideModal();
+}
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('slide-modal');
+  if (!modal.classList.contains('active')) return;
+  if (e.key === 'ArrowLeft') navigateSlide(-1);
+  if (e.key === 'ArrowRight') navigateSlide(1);
+  if (e.key === 'Escape') modal.classList.remove('active');
+});
+
+// SSE progress listener
+{% if is_running %}
+connectSSE('{{ project.id }}');
+{% endif %}
+</script>
+{% endblock %}

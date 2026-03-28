@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+{% block title %}Manage Frames - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="/" class="breadcrumb">Projects</a> /
+    <a href="/projects/{{ project.id }}" class="breadcrumb">{{ project.name }}</a> /
+    <span>Manage Frames</span>
+    <h1>Manage Frames</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="rerenderSlides()">Re-render Slides</button>
+  </div>
+</div>
+
+<p class="text-muted">Click a frame to replace it with a new image. After replacing frames, click "Re-render Slides" to regenerate.</p>
+
+<div class="frames-grid" id="frames-grid">
+  {% for fr in frames %}
+  <div class="frame-card" data-idx="{{ fr.index }}">
+    <div class="frame-img-wrapper">
+      {% if fr.exists %}
+      <img src="/api/projects/{{ project.id }}/assets/frames/{{ fr.index }}" alt="Frame {{ fr.index }}" loading="lazy">
+      {% else %}
+      <div class="frame-missing">Missing</div>
+      {% endif %}
+    </div>
+    <div class="frame-info">
+      <span class="frame-idx">#{{ fr.index }}</span>
+      <span class="frame-time">{{ "%.1f" | format(fr.timestamp) }}s</span>
+      <label class="btn btn-sm upload-label">
+        Replace
+        <input type="file" accept="image/*" onchange="replaceFrame({{ fr.index }}, this)" hidden>
+      </label>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div id="editor-status" class="editor-status"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECT_ID = '{{ project.id }}';
+
+function showStatus(msg, isError) {
+  const el = document.getElementById('editor-status');
+  el.textContent = msg;
+  el.className = 'editor-status ' + (isError ? 'error' : 'success');
+  setTimeout(() => el.textContent = '', 4000);
+}
+
+async function replaceFrame(idx, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/assets/frames/${idx}`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (resp.ok) {
+    showStatus(`Frame ${idx} replaced.`);
+    const card = document.querySelector(`.frame-card[data-idx="${idx}"] img`);
+    if (card) card.src = `/api/projects/${PROJECT_ID}/assets/frames/${idx}?t=${Date.now()}`;
+  } else {
+    showStatus('Replace failed', true);
+  }
+}
+
+async function rerenderSlides() {
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/run-from/render`, {method: 'POST'});
+  if (resp.ok) {
+    showStatus('Re-rendering slides...');
+    connectSSE(PROJECT_ID);
+  } else {
+    showStatus('Failed to start re-render', true);
+  }
+}
+</script>
+{% endblock %}

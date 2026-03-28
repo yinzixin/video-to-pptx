@@ -1,4 +1,5 @@
 input/
 output/
+projects/
 .env
-_pycache_/
+__pycache__/

@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% block title %}Edit Slide Plan - {{ project.name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/dracula.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="/" class="breadcrumb">Projects</a> /
+    <a href="/projects/{{ project.id }}" class="breadcrumb">{{ project.name }}</a> /
+    <span>Edit Slide Plan</span>
+    <h1>Edit Slide Plan</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn" onclick="savePlan()">Save</button>
+    <button class="btn btn-primary" onclick="saveAndRerender()">Save &amp; Re-render</button>
+  </div>
+</div>
+
+<div class="editor-split">
+  <div class="editor-pane">
+    <h3>Slide Plan (editable)</h3>
+    <textarea id="plan-editor">{{ plan_data }}</textarea>
+  </div>
+  <div class="editor-pane">
+    <h3>OpenAI Raw Response (read-only)</h3>
+    <textarea id="raw-editor" readonly>{{ raw_data }}</textarea>
+  </div>
+</div>
+
+<div id="editor-status" class="editor-status"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/javascript/javascript.min.js"></script>
+<script>
+const PROJECT_ID = '{{ project.id }}';
+
+const planCM = CodeMirror.fromTextArea(document.getElementById('plan-editor'), {
+  mode: {name: 'javascript', json: true},
+  theme: 'dracula',
+  lineNumbers: true,
+  lineWrapping: true,
+  matchBrackets: true,
+  tabSize: 2,
+});
+
+const rawCM = CodeMirror.fromTextArea(document.getElementById('raw-editor'), {
+  mode: {name: 'javascript', json: true},
+  theme: 'dracula',
+  lineNumbers: true,
+  lineWrapping: true,
+  readOnly: true,
+  tabSize: 2,
+});
+
+function showStatus(msg, isError) {
+  const el = document.getElementById('editor-status');
+  el.textContent = msg;
+  el.className = 'editor-status ' + (isError ? 'error' : 'success');
+  setTimeout(() => el.textContent = '', 4000);
+}
+
+async function savePlan() {
+  const text = planCM.getValue();
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch(e) {
+    showStatus('Invalid JSON: ' + e.message, true);
+    return;
+  }
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/assets/plan`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(parsed),
+  });
+  if (resp.ok) {
+    showStatus('Slide plan saved.');
+  } else {
+    showStatus('Save failed: ' + resp.statusText, true);
+  }
+}
+
+async function saveAndRerender() {
+  await savePlan();
+  const resp = await fetch(`/api/projects/${PROJECT_ID}/run-from/render`, {method: 'POST'});
+  if (resp.ok) {
+    showStatus('Saved. Re-rendering slides...');
+    connectSSE(PROJECT_ID);
+  } else {
+    showStatus('Failed to start re-render', true);
+  }
+}
+</script>
+{% endblock %}

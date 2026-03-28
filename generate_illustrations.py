@@ -12,6 +12,8 @@ from openai import OpenAI
 
 from slide_plan import SlidePlan
 
+_ILLUSTRATION_SLIDE_TYPES = {"moral_lesson", "vocabulary"}
+
 
 def _prompt_key(prompt: str) -> str:
     """Stable short key for caching / dedup."""
@@ -19,9 +21,15 @@ def _prompt_key(prompt: str) -> str:
 
 
 def _collect_prompts(plan: SlidePlan) -> list[tuple[str, str]]:
-    """Return (key, prompt) pairs from the plan, deduplicated."""
+    """Return (key, prompt) pairs from the plan, deduplicated.
+
+    Only collects prompts for slide types whose templates actually render
+    illustrations (moral_lesson and vocabulary) to avoid wasting DALL-E calls.
+    """
     seen: dict[str, str] = {}
     for slide in plan.slides:
+        if slide.slide_type not in _ILLUSTRATION_SLIDE_TYPES:
+            continue
         if slide.illustration_prompt:
             k = _prompt_key(slide.illustration_prompt)
             seen.setdefault(k, slide.illustration_prompt)
@@ -127,12 +135,14 @@ def map_illustrations_to_plan(
     vocab_map: dict[str, str | None] = {}
 
     for i, slide in enumerate(plan.slides):
-        if slide.illustration_prompt:
+        if slide.slide_type in _ILLUSTRATION_SLIDE_TYPES and slide.illustration_prompt:
             k = _prompt_key(slide.illustration_prompt)
             slide_map[i] = illustrations.get(k)
         else:
             slide_map[i] = None
 
+        if slide.slide_type not in _ILLUSTRATION_SLIDE_TYPES:
+            continue
         for vi in slide.vocab_items or []:
             if vi.illustration_prompt:
                 k = _prompt_key(vi.illustration_prompt)
