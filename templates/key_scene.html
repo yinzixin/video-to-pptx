@@ -5,49 +5,54 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 20px;
+  gap: 14px;
 }
 .scene-top {
   display: flex;
-  gap: 30px;
-  align-items: start;
+  gap: 28px;
+  align-items: center;
+  flex-shrink: 0;
 }
 .scene-image-wrap {
   flex: 0 0 auto;
-  position: relative;
-  padding: 12px;
+  padding: 10px;
   background: rgba(255,255,255,0.06);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 .scene-image-wrap img {
-  max-height: 280px;
+  max-height: 220px;
+  max-width: 360px;
   border-radius: 6px;
+  display: block;
 }
 .scene-context {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  justify-content: center;
 }
 .scene-context-item {
-  font-size: 22px;
+  font-size: 24px;
   color: rgba(255,255,255,0.7);
   font-weight: 500;
+  line-height: 1.4;
 }
 .scene-dialogue-area {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
+  justify-content: center;
 }
 .bubble-left {
   align-self: flex-start;
-  max-width: 80%;
+  max-width: 75%;
 }
 .bubble-right {
   align-self: flex-end;
-  max-width: 80%;
+  max-width: 75%;
   background: rgba(244, 197, 66, 0.08);
   border-color: rgba(244, 197, 66, 0.2);
 }

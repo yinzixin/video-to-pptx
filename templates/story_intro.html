@@ -3,12 +3,12 @@
 {% block extra_style %}
 .intro-layout {
   display: flex;
-  gap: 40px;
+  gap: 44px;
   height: 100%;
-  align-items: stretch;
+  align-items: center;
 }
 .intro-image-col {
-  flex: 0 0 44%;
+  flex: 0 0 42%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,13 +23,13 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 14px;
+  gap: 16px;
 }
 .intro-bullet {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 500;
   line-height: 1.5;
-  padding: 8px 16px;
+  padding: 12px 20px;
   background: rgba(255,255,255,0.05);
   border-radius: 12px;
   border-left: 4px solid #F4C542;
@@ -40,7 +40,9 @@
 <div class="intro-layout">
   {% if frame_image %}
   <div class="intro-image-col">
-    <img src="{{ frame_image }}" class="frame-photo frame-rotated" />
+    <div class="taped-photo">
+      <img src="{{ frame_image }}" class="frame-photo frame-rotated" />
+    </div>
   </div>
   {% endif %}
   <div class="intro-text-col">

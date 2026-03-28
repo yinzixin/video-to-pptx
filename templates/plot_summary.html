@@ -3,8 +3,9 @@
 {% block extra_style %}
 .plot-layout {
   display: flex;
-  gap: 36px;
+  gap: 40px;
   height: 100%;
+  align-items: center;
 }
 .plot-flow {
   flex: 1;
@@ -13,7 +14,7 @@
   justify-content: center;
 }
 .plot-image-side {
-  flex: 0 0 320px;
+  flex: 0 0 340px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,7 +41,9 @@
   </div>
   {% if frame_image %}
   <div class="plot-image-side">
-    <img src="{{ frame_image }}" class="frame-photo" style="border-radius:16px;" />
+    <div class="taped-photo">
+      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:12px;" />
+    </div>
   </div>
   {% endif %}
 </div>

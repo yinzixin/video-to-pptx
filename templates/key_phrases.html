@@ -1,20 +1,37 @@
 {% extends "base.html" %}
 
 {% block extra_style %}
+.phrases-layout {
+  display: flex;
+  gap: 36px;
+  height: 100%;
+  align-items: center;
+}
+.phrases-frame-col {
+  flex: 0 0 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.phrases-frame-col img {
+  max-width: 100%;
+  max-height: 90%;
+  object-fit: contain;
+}
 .phrases-container {
+  flex: 1;
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
-  gap: 16px;
-  height: 100%;
+  gap: 18px;
   padding: 20px;
 }
 .phrase-box {
   display: inline-block;
-  padding: 18px 32px;
+  padding: 20px 34px;
   border-radius: 16px;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 600;
   line-height: 1.4;
   max-width: 100%;
@@ -46,9 +63,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="phrases-container">
-  {% for bullet in bullets %}
-  <div class="phrase-box">{{ bullet }}</div>
-  {% endfor %}
+<div class="phrases-layout">
+  {% if frame_image %}
+  <div class="phrases-frame-col">
+    <div class="taped-photo">
+      <img src="{{ frame_image }}" class="frame-photo frame-rotated" style="border-radius:10px;" />
+    </div>
+  </div>
+  {% endif %}
+  <div class="phrases-container">
+    {% for bullet in bullets %}
+    <div class="phrase-box">{{ bullet }}</div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

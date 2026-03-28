@@ -8,39 +8,36 @@
   justify-content: center;
   height: 100%;
   text-align: center;
+  position: relative;
+  z-index: 2;
 }
 .title-main {
   font-family: 'Fredoka', cursive;
-  font-size: 76px;
+  font-size: 80px;
   color: #F4C542;
-  text-shadow: 3px 4px 10px rgba(0,0,0,0.4);
+  text-shadow: 3px 5px 12px rgba(0,0,0,0.6);
   margin-bottom: 24px;
   line-height: 1.15;
-  max-width: 1400px;
+  max-width: 1500px;
 }
 .title-sub {
-  font-size: 30px;
-  color: rgba(255,255,255,0.55);
+  font-size: 32px;
+  color: rgba(255,255,255,0.65);
   font-style: italic;
-  margin-bottom: 36px;
+  margin-bottom: 40px;
+  text-shadow: 1px 2px 4px rgba(0,0,0,0.4);
 }
 .title-summary {
   max-width: 1200px;
-}
-.title-frame {
-  position: absolute;
-  bottom: 60px;
-  right: 80px;
-  opacity: 0.25;
-  border-radius: 16px;
-  max-width: 300px;
-  max-height: 200px;
 }
 {% endblock %}
 
 {% block header %}{% endblock %}
 
 {% block content %}
+{% if frame_image %}
+<div class="hero-bg"><img src="{{ frame_image }}" /></div>
+{% endif %}
 <div class="title-center">
   <h1 class="title-main">{{ lesson_title }}</h1>
   <p class="title-sub">{{ subtitle }}</p>
@@ -52,7 +49,4 @@
   </div>
   {% endif %}
 </div>
-{% if frame_image %}
-<img src="{{ frame_image }}" class="title-frame" />
-{% endif %}
 {% endblock %}

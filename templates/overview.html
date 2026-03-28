@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 
 {% block extra_style %}
+.overview-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 20px;
+}
 .overview-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  height: 100%;
+  gap: 22px;
+  flex: 1;
+  align-content: center;
 }
 .overview-card {
   background: rgba(255,255,255,0.07);
@@ -21,56 +28,69 @@
 .overview-heading {
   font-family: 'Fredoka', cursive;
   color: #F4C542;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 600;
   margin-bottom: 14px;
   padding-bottom: 8px;
   border-bottom: 2px solid rgba(244, 197, 66, 0.2);
 }
 .overview-text {
-  font-size: 24px;
+  font-size: 26px;
   line-height: 1.5;
   font-weight: 500;
 }
 .objective-item {
-  font-size: 22px;
-  padding: 5px 0;
+  font-size: 25px;
+  padding: 6px 0;
   font-weight: 500;
 }
 .objective-item::before {
   content: '🎯 ';
 }
+.overview-filmstrip {
+  flex-shrink: 0;
+}
 {% endblock %}
 
 {% block content %}
-<div class="overview-grid">
-  {% if story_summary %}
-  <div class="overview-card">
-    <div class="overview-heading">📖 Story Summary</div>
-    <p class="overview-text">{{ story_summary }}</p>
-  </div>
-  {% endif %}
+<div class="overview-layout">
+  <div class="overview-grid">
+    {% if story_summary %}
+    <div class="overview-card">
+      <div class="overview-heading">📖 Story Summary</div>
+      <p class="overview-text">{{ story_summary }}</p>
+    </div>
+    {% endif %}
 
-  {% if moral %}
-  <div class="overview-card">
-    <div class="overview-heading">💡 The Moral</div>
-    <p class="overview-text">{{ moral }}</p>
-  </div>
-  {% endif %}
+    {% if moral %}
+    <div class="overview-card">
+      <div class="overview-heading">💡 The Moral</div>
+      <p class="overview-text">{{ moral }}</p>
+    </div>
+    {% endif %}
 
-  {% if learning_objectives %}
-  <div class="overview-card{% if not teaching_rationale %} full-width{% endif %}">
-    <div class="overview-heading">🎯 Learning Objectives</div>
-    {% for obj in learning_objectives %}
-    <div class="objective-item">{{ obj }}</div>
+    {% if learning_objectives %}
+    <div class="overview-card{% if not teaching_rationale %} full-width{% endif %}">
+      <div class="overview-heading">🎯 Learning Objectives</div>
+      {% for obj in learning_objectives %}
+      <div class="objective-item">{{ obj }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if teaching_rationale %}
+    <div class="overview-card">
+      <div class="overview-heading">📋 Teaching Rationale</div>
+      <p class="overview-text">{{ teaching_rationale }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if frame_gallery %}
+  <div class="overview-filmstrip filmstrip">
+    {% for fr in frame_gallery %}
+    <div class="filmstrip-frame"><img src="{{ fr }}" /></div>
     {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if teaching_rationale %}
-  <div class="overview-card">
-    <div class="overview-heading">📋 Teaching Rationale</div>
-    <p class="overview-text">{{ teaching_rationale }}</p>
   </div>
   {% endif %}
 </div>

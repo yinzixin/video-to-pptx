@@ -1,48 +1,73 @@
 {% extends "base.html" %}
 
 {% block extra_style %}
+.vocab-layout {
+  display: flex;
+  gap: 32px;
+  height: 100%;
+  align-items: center;
+}
 .vocab-grid {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  height: 100%;
-  align-content: start;
+  gap: 20px;
+  align-content: center;
 }
 .vocab-card {
   display: flex;
-  gap: 18px;
+  gap: 20px;
   align-items: center;
   background: rgba(255,255,255,0.07);
   border-radius: 16px;
-  padding: 16px 20px;
+  padding: 22px 26px;
   border: 1px solid rgba(255,255,255,0.1);
-  transition: background 0.2s;
 }
 .vocab-card:nth-child(4n+1) { border-left: 4px solid #F4C542; }
 .vocab-card:nth-child(4n+2) { border-left: 4px solid #E88D67; }
 .vocab-card:nth-child(4n+3) { border-left: 4px solid #6DD3CE; }
 .vocab-card:nth-child(4n+4) { border-left: 4px solid #C49BFF; }
 .vocab-info { flex: 1; }
+.vocab-frame-col {
+  flex: 0 0 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vocab-frame-col img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
 {% endblock %}
 
 {% block content %}
-<div class="vocab-grid">
-  {% for item in vocab_items %}
-  <div class="vocab-card">
-    {% if item.illustration %}
-    <img src="{{ item.illustration }}" class="vocab-illustration" />
-    {% endif %}
-    <div class="vocab-info">
-      <div>
-        <span class="vocab-word">{{ item.word }}</span>
-        {% if item.pos %}<span class="vocab-pos">({{ item.pos }})</span>{% endif %}
-      </div>
-      <div class="vocab-definition">{{ item.definition }}</div>
-      {% if item.example %}
-      <div class="vocab-example">"{{ item.example }}"</div>
+<div class="vocab-layout">
+  <div class="vocab-grid">
+    {% for item in vocab_items %}
+    <div class="vocab-card">
+      {% if item.illustration %}
+      <img src="{{ item.illustration }}" class="vocab-illustration" />
       {% endif %}
+      <div class="vocab-info">
+        <div>
+          <span class="vocab-word">{{ item.word }}</span>
+          {% if item.pos %}<span class="vocab-pos">({{ item.pos }})</span>{% endif %}
+        </div>
+        <div class="vocab-definition">{{ item.definition }}</div>
+        {% if item.example %}
+        <div class="vocab-example">"{{ item.example }}"</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if frame_image %}
+  <div class="vocab-frame-col">
+    <div class="pinned-photo">
+      <img src="{{ frame_image }}" class="frame-photo" style="border-radius:10px;" />
     </div>
   </div>
-  {% endfor %}
+  {% endif %}
 </div>
 {% endblock %}
