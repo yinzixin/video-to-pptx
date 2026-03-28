@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  whisper:
+    build: .
+    container_name: whisper_cpu
+
+    volumes:
+      - .:/app
+
+    working_dir: /app
+
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+    # Example: docker compose run --rm whisper python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+    command:  python cartoon_to_slides.py --video input/1.mp4 --work-dir output --skip-transcribe --skip-frames --out output/lesson.pptx

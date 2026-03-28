@@ -1,0 +1,4 @@
+input/
+output/
+.env
+_pycache_/

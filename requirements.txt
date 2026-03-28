@@ -1,0 +1,5 @@
+faster-whisper>=1.0.0
+openai>=1.40.0
+python-pptx>=0.6.23
+pydantic>=2.0.0
+Pillow>=10.0.0
