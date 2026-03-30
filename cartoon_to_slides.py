@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import os
+from collections import Counter
 import sys
 import time
+from pathlib import Path
+from typing import Iterable
 
 from build_pptx import build_presentation_from_images, build_presentation_legacy
 from extract_frames import (
@@ -22,19 +26,23 @@ from slide_plan import generate_slide_plan
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Build a teaching PowerPoint from a cartoon video "
-        "(transcribe, frames, LLM, PPTX)."
-    )
-    p.add_argument("--video", required=True, help="Path to video file (e.g. .mp4)")
-    p.add_argument(
-        "--out",
-        default="output/lesson.pptx",
-        help="Output .pptx path (default: output/lesson.pptx)",
+        description="Build a teaching PowerPoint from cartoon video(s) "
+        "(transcribe, frames, LLM, PPTX). Each input is written to "
+        "OUTPUT_DIR/<stem>/<stem>.pptx with assets in OUTPUT_DIR/<stem>/."
     )
     p.add_argument(
-        "--work-dir",
-        default="output",
-        help="Directory for transcript.json, frames/, manifests (default: output)",
+        "--input",
+        nargs="+",
+        required=True,
+        metavar="PATH_OR_GLOB",
+        help="One or more video paths and/or glob patterns (e.g. *.mp4). "
+        "Quoted globs work on Windows.",
+    )
+    p.add_argument(
+        "--output",
+        default=None,
+        metavar="DIR",
+        help="Base directory for each input's subfolder (default: current directory).",
     )
     p.add_argument(
         "--whisper-model",
@@ -141,14 +149,40 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--skip-transcribe",
         action="store_true",
-        help="Reuse existing transcript.json in work-dir",
+        help="Reuse existing transcript.json in each input's work folder",
     )
     p.add_argument(
         "--skip-frames",
         action="store_true",
-        help="Reuse existing frames_manifest.json in work-dir/frames",
+        help="Reuse existing frames_manifest.json in each work folder under frames/",
     )
     return p.parse_args()
+
+
+def expand_input_paths(tokens: Iterable[str]) -> list[str]:
+    """Resolve globs and literal paths to a deduplicated ordered list of files."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in tokens:
+        token = os.path.expanduser(raw)
+        if glob.has_magic(token):
+            matches = sorted(glob.glob(token))
+            files = [m for m in matches if os.path.isfile(m)]
+            if not files:
+                raise ValueError(f"No files matched pattern: {raw!r}")
+            for m in files:
+                ap = os.path.abspath(m)
+                if ap not in seen:
+                    seen.add(ap)
+                    out.append(ap)
+        else:
+            ap = os.path.abspath(token)
+            if not os.path.isfile(ap):
+                raise ValueError(f"Video not found: {ap}")
+            if ap not in seen:
+                seen.add(ap)
+                out.append(ap)
+    return out
 
 
 def _fmt_secs(seconds: float) -> str:
@@ -158,17 +192,10 @@ def _fmt_secs(seconds: float) -> str:
     return f"{m}m {s}s"
 
 
-def main() -> int:
+def run_pipeline(video: str, work: str, out_pptx: str, args: argparse.Namespace) -> int:
     from transcribe import save_transcript_json, transcribe_video
 
-    args = parse_args()
     t0 = time.perf_counter()
-    video = os.path.abspath(args.video)
-    if not os.path.isfile(video):
-        print(f"Video not found: {video}", file=sys.stderr)
-        return 1
-
-    work = os.path.abspath(args.work_dir)
     os.makedirs(work, exist_ok=True)
     transcript_path = os.path.join(work, "transcript.json")
     frames_dir = os.path.join(work, "frames")
@@ -179,7 +206,7 @@ def main() -> int:
     print("[cartoon_to_slides] Starting pipeline", flush=True)
     print(f"  Video:     {video}", flush=True)
     print(f"  Work dir:  {work}", flush=True)
-    print(f"  Output:    {os.path.abspath(args.out)}", flush=True)
+    print(f"  Output:    {out_pptx}", flush=True)
     print(
         f"  Options:   whisper={args.whisper_model!r}, openai={args.openai_model!r}, "
         f"max_slides={args.max_slides}, frame_strategy={args.frame_strategy!r}",
@@ -353,7 +380,6 @@ def main() -> int:
     print(f"{step}: validated slide plan saved to {plan_path}", flush=True)
 
     # --- 4. Build PPTX ---
-    out_pptx = os.path.abspath(args.out)
     base = os.path.basename(video)
 
     if args.legacy_renderer:
@@ -400,6 +426,49 @@ def main() -> int:
         f"\n[cartoon_to_slides] Finished in {_fmt_secs(time.perf_counter() - t0)} total.",
         flush=True,
     )
+    return 0
+
+
+def main() -> int:
+    args = parse_args()
+    output_base = os.path.abspath(args.output if args.output is not None else ".")
+
+    try:
+        video_paths = expand_input_paths(args.input)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    stems = [Path(p).stem for p in video_paths]
+    dup = {s for s, n in Counter(stems).items() if n > 1}
+    if dup:
+        print(
+            "Duplicate input basename(s) under the same --output — "
+            f"each folder must be unique: {sorted(dup)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    n = len(video_paths)
+    print(
+        f"[cartoon_to_slides] {n} input file(s) → base directory: {output_base}",
+        flush=True,
+    )
+    print(flush=True)
+
+    for i, video in enumerate(video_paths):
+        stem = Path(video).stem
+        work = os.path.join(output_base, stem)
+        out_pptx = os.path.join(work, f"{stem}.pptx")
+        if n > 1:
+            print(
+                f"========== [{i + 1}/{n}] {video} → {work} ==========",
+                flush=True,
+            )
+        rc = run_pipeline(video, work, out_pptx, args)
+        if rc != 0:
+            return rc
+
     return 0
 
 

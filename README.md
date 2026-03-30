@@ -24,10 +24,10 @@ Generate pedagogically structured English teaching PowerPoints from animated vid
 │   3. plan        ─► slide_plan.json                              │
 │   4. illustrations ─► (skipped — no longer used)               │
 │   5. render      ─► slides/*.png + html_debug/*.html             │
-│   6. pptx        ─► lesson.pptx                                 │
+│   6. pptx        ─► <stem>.pptx (per project)                    │
 ├──────────────────────────────────────────────────────────────────┤
 │  CLI (cartoon_to_slides.py)                                      │
-│  Same pipeline steps, driven by argparse                         │
+│  --input / --output — per-input folder & <stem>.pptx             │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,9 +90,23 @@ python -m uvicorn app:app --reload
 
 ## CLI
 
+Each input file is processed into **`OUTPUT_DIR/<stem>/<stem>.pptx`**, with transcript, frames, and rendered assets in **`OUTPUT_DIR/<stem>/`**. **`--output`** defaults to the **current directory**.
+
 ```bash
-python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+# All .mp4 files in the current directory → ./<stem>/<stem>.pptx
+python cartoon_to_slides.py --input "*.mp4"
+
+# Explicit base directory → some_folder/<stem>/<stem>.pptx
+python cartoon_to_slides.py --input "*.mp4" --output some_folder
+
+# One file, outputs to ./lesson/lesson.pptx (when the file is lesson.mp4)
+python cartoon_to_slides.py --input input/lesson.mp4
+
+# Multiple paths or patterns
+python cartoon_to_slides.py --input a.mp4 other/b.mp4 "archive/*.mp4"
 ```
+
+On Windows, quote glob patterns so the shell does not expand them before Python: `--input "*.mp4"`.
 
 Default slide model is **`gpt-4.1`** with **`--openai-temperature=0.6`** (default). For `gpt-5.*` models, **`--reasoning-effort`** applies instead of temperature.
 
@@ -100,6 +114,8 @@ Default slide model is **`gpt-4.1`** with **`--openai-temperature=0.6`** (defaul
 
 | Flag | Description |
 |---|---|
+| `--input` | One or more video paths and/or glob patterns (required) |
+| `--output` | Base directory for per-input subfolders (default: current directory) |
 | `--whisper-device` | Whisper device: `auto` (default), `cuda`, or `cpu` |
 | `--compute-type` | Compute precision (default: auto — `float16` for cuda, `int8` for cpu) |
 | `--legacy-renderer` | Use the original python-pptx text renderer |
@@ -107,12 +123,12 @@ Default slide model is **`gpt-4.1`** with **`--openai-temperature=0.6`** (defaul
 | `--max-vision-frames` | Max frames for Vision API (default: 8) |
 | `--audience` | Learner description, e.g. `"kids aged 8-10, A2"` |
 | `--max-slides` | Maximum content slides (default: 12) |
-| `--skip-transcribe` | Reuse existing transcript.json |
-| `--skip-frames` | Reuse existing frames manifest |
+| `--skip-transcribe` | Reuse existing `transcript.json` in each input folder |
+| `--skip-frames` | Reuse existing frames manifest in each input folder |
 
 ### All options
 
-`--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--openai-model`, `--reasoning-effort` (`none|low|medium|high|xhigh`, gpt-5.* only), `--openai-temperature`, `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
+`--input`, `--output`, `--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--openai-model`, `--reasoning-effort` (`none|low|medium|high|xhigh`, gpt-5.* only), `--openai-temperature`, `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
 
 ## Setup
 
@@ -149,7 +165,7 @@ Docker Compose reads `.env` automatically — no extra flags needed.
 ```bash
 docker compose up --build              # Web UI on :8000
 docker compose run --rm whisper \
-  python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+  python cartoon_to_slides.py --input input/1.mp4 --output output
 ```
 
 ### GPU (NVIDIA CUDA)
@@ -165,7 +181,7 @@ Uses `Dockerfile.gpu` (NVIDIA CUDA 12.4 + cuDNN base image) and `docker-compose.
 ```bash
 docker compose -f docker-compose.gpu.yaml up --build     # Web UI on :8000 with GPU
 docker compose -f docker-compose.gpu.yaml run --rm whisper \
-  python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+  python cartoon_to_slides.py --input input/1.mp4 --output output
 ```
 
 GPU acceleration uses `float16` compute by default (vs `int8` on CPU) and provides ~5-10x faster transcription, especially with larger Whisper models like `large-v3`.

@@ -21,7 +21,7 @@ services:
     command: python -m uvicorn app:app --host 0.0.0.0 --port 8000
 
     # CLI example:
-    # docker compose run --rm whisper python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+    # docker compose run --rm whisper python cartoon_to_slides.py --input input/1.mp4 --output output
 
 volumes:
   hf-cache:
