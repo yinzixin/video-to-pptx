@@ -120,6 +120,13 @@ def parse_args() -> argparse.Namespace:
         help="Seconds after segment start to grab frame (default: 0.25)",
     )
     p.add_argument(
+        "--time-jitter-seconds",
+        type=float,
+        default=0.75,
+        help="Random ±seconds applied to each frame time so runs differ (default: 0.75; "
+        "0 disables)",
+    )
+    p.add_argument(
         "--audience",
         default=None,
         help="Optional learner description for the LLM (e.g. 'kids aged 8-10, A2')",
@@ -325,6 +332,7 @@ def run_pipeline(video: str, work: str, out_pptx: str, args: argparse.Namespace)
             strategy=strategy,
             interval_seconds=args.interval_seconds,
             time_offset=args.frame_offset,
+            time_jitter_seconds=args.time_jitter_seconds,
             max_frames=max_frames,
         )
         manifest = load_manifest(manifest_path)

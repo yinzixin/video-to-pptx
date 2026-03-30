@@ -95,6 +95,7 @@ def _step_frames(
         strategy=strategy,
         interval_seconds=cfg.interval_seconds,
         time_offset=cfg.frame_offset,
+        time_jitter_seconds=cfg.time_jitter_seconds,
         max_frames=max_frames,
     )
     manifest = load_manifest(manifest_path)

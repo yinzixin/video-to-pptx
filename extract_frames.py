@@ -6,6 +6,7 @@ import base64
 import io
 import json
 import os
+import random
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -15,6 +16,22 @@ FrameStrategy = Literal["segment", "interval"]
 
 _BLACK_SKIP_STEP = 1.0  # seconds to advance when a black frame is detected
 _BLACK_SKIP_MAX = 5.0   # max total seconds to advance looking for non-black frame
+_EDGE_MARGIN = 0.05     # keep sampled times inside segment / file bounds
+
+
+def _jitter_timestamp(
+    base: float,
+    jitter: float,
+    t_min: float,
+    t_max: float,
+) -> float:
+    """Add uniform random jitter in ``[-jitter, jitter]`` and clamp to ``[t_min, t_max]``."""
+    if jitter <= 0:
+        return base
+    t = base + random.uniform(-jitter, jitter)
+    if t_max < t_min:
+        return max(0.0, 0.5 * (t_min + t_max))
+    return max(t_min, min(t_max, t))
 
 
 @dataclass
@@ -131,6 +148,7 @@ def extract_frames(
     strategy: FrameStrategy = "segment",
     interval_seconds: float = 30.0,
     time_offset: float = 0.25,
+    time_jitter_seconds: float = 0.75,
     max_frames: int | None = None,
     verbose: bool = True,
 ) -> tuple[list[FrameEntry], str]:
@@ -139,6 +157,9 @@ def extract_frames(
 
     - segment: one frame per segment at start + time_offset (capped by max_frames).
     - interval: every interval_seconds from 0 until duration (capped by max_frames).
+    - time_jitter_seconds: uniform random offset (seconds) applied per frame so
+      repeated runs can capture different moments; clamped to segment/video bounds.
+      Use 0 to disable.
 
     Returns (frame_entries, manifest_path).
     """
@@ -160,15 +181,30 @@ def extract_frames(
             step = max(1, len(indices) // max_frames)
             indices = indices[::step][:max_frames]
         total = len(indices)
+        duration: float | None = None
+        if time_jitter_seconds > 0:
+            duration = _probe_duration(video_path)
         if verbose:
+            jit_msg = (
+                f", jitter ±{time_jitter_seconds}s"
+                if time_jitter_seconds > 0
+                else ""
+            )
             print(
                 f"[extract_frames] segment strategy: extracting {total} frame(s) "
-                f"(offset +{time_offset}s after each segment start)…",
+                f"(offset +{time_offset}s after each segment start{jit_msg})…",
                 flush=True,
             )
         for n, i in enumerate(indices):
             seg = segments[i]
-            t = float(seg["start"]) + time_offset
+            seg_start = float(seg["start"])
+            seg_end = float(seg.get("end", seg_start))
+            base = seg_start + time_offset
+            t_lo = seg_start
+            t_hi = max(seg_start, seg_end - _EDGE_MARGIN)
+            if duration is not None:
+                t_hi = min(t_hi, duration - _EDGE_MARGIN)
+            t = _jitter_timestamp(base, time_jitter_seconds, t_lo, t_hi)
             name = f"frame_{n:05d}.png"
             out_path = os.path.join(output_dir, name)
             if verbose:
@@ -193,10 +229,16 @@ def extract_frames(
         # interval — need duration
         duration = _probe_duration(video_path)
         total = _count_interval_extractions(duration, interval_seconds, max_frames)
+        t_hi_global = max(0.0, duration - _EDGE_MARGIN)
         if verbose:
+            jit_msg = (
+                f", jitter ±{time_jitter_seconds}s"
+                if time_jitter_seconds > 0
+                else ""
+            )
             print(
                 f"[extract_frames] interval strategy: duration={duration:.1f}s, "
-                f"every {interval_seconds}s, ~{total} frame(s)…",
+                f"every {interval_seconds}s{jit_msg}, ~{total} frame(s)…",
                 flush=True,
             )
         t = 0.0
@@ -204,22 +246,23 @@ def extract_frames(
         while t < duration and (max_frames is None or n < max_frames):
             name = f"frame_{n:05d}.png"
             out_path = os.path.join(output_dir, name)
+            t_use = _jitter_timestamp(t, time_jitter_seconds, 0.0, t_hi_global)
             if verbose:
                 print(
-                    f"  [{n + 1}/{total}] t={t:.2f}s -> {name}",
+                    f"  [{n + 1}/{total}] t={t_use:.2f}s -> {name}",
                     flush=True,
                 )
             if n == 0:
-                t = _extract_skip_black(
-                    video_path, t, out_path,
+                t_use = _extract_skip_black(
+                    video_path, t_use, out_path,
                     duration=duration, verbose=verbose,
                 )
             else:
-                _run_ffmpeg_ss(video_path, t, out_path)
+                _run_ffmpeg_ss(video_path, t_use, out_path)
             entries.append(
                 FrameEntry(
                     path=os.path.abspath(out_path),
-                    timestamp_seconds=t,
+                    timestamp_seconds=t_use,
                     segment_index=None,
                 )
             )

@@ -222,7 +222,12 @@ async def api_create_project(request: Request):
                 config[key] = int(val)
             except ValueError:
                 pass
-    for key in ("llm_temperature", "interval_seconds", "frame_offset"):
+    for key in (
+        "llm_temperature",
+        "interval_seconds",
+        "frame_offset",
+        "time_jitter_seconds",
+    ):
         val = form.get(key)
         if val:
             try:

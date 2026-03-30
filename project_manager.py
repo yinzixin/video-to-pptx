@@ -61,6 +61,7 @@ class PipelineConfig(BaseModel):
     frame_strategy: str = "segment"
     interval_seconds: float = 30.0
     frame_offset: float = 0.25
+    time_jitter_seconds: float = 0.75
     audience: str | None = None
     use_vision: bool = False
     max_vision_frames: int = 8
