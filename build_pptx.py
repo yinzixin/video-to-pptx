@@ -290,7 +290,7 @@ def _render_vocabulary(
         _add_teacher_notes(slide, spec.teacher_notes)
         return
 
-    display_items = items[:8]
+    display_items = items[:8]  # safety cap; upstream split keeps each slide ≤ 8
     rows = len(display_items) + 1
     tbl_shape = slide.shapes.add_table(
         rows, 4, Inches(0.3), Inches(0.85), Inches(9.4), Inches(rows * 0.45)

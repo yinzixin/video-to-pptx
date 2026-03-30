@@ -1,4 +1,4 @@
-"""Call OpenAI to produce a structured slide plan from transcript and frame manifest."""
+"""Call an LLM to produce a structured slide plan from transcript and frame manifest."""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ import json
 import os
 from typing import Any, Literal, overload
 
-from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from llm_provider import get_llm_client, get_provider
 
 # ---------------------------------------------------------------------------
 # Slide‑type taxonomy
@@ -465,8 +466,11 @@ def _episode_context(
     }
 
 
-def _is_gpt5_family(model: str) -> bool:
-    return (model or "").lower().startswith("gpt-5")
+def _supports_reasoning_effort(provider_name: str) -> bool:
+    try:
+        return get_provider(provider_name).supports_reasoning_effort
+    except ValueError:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -536,7 +540,7 @@ def build_user_payload(
 
 
 # ---------------------------------------------------------------------------
-# Generate slide plan via OpenAI
+# Generate slide plan via LLM
 # ---------------------------------------------------------------------------
 
 
@@ -545,6 +549,7 @@ def generate_slide_plan(
     transcript_payload: dict[str, Any],
     frames_manifest: dict[str, Any],
     *,
+    provider: str = ...,
     model: str = ...,
     max_slides: int = ...,
     audience: str | None = ...,
@@ -561,6 +566,7 @@ def generate_slide_plan(
     transcript_payload: dict[str, Any],
     frames_manifest: dict[str, Any],
     *,
+    provider: str = ...,
     model: str = ...,
     max_slides: int = ...,
     audience: str | None = ...,
@@ -576,6 +582,7 @@ def generate_slide_plan(
     transcript_payload: dict[str, Any],
     frames_manifest: dict[str, Any],
     *,
+    provider: str = "openai",
     model: str = "gpt-4.1",
     max_slides: int = 12,
     audience: str | None = None,
@@ -585,16 +592,13 @@ def generate_slide_plan(
     vision_frames: list[dict[str, Any]] | None = None,
     return_usage: bool = False,
 ) -> SlidePlan | tuple[SlidePlan, dict[str, int] | None, str]:
-    key = api_key or os.environ.get("OPENAI_API_KEY")
-    if not key:
-        raise ValueError("OPENAI_API_KEY is not set")
+    client = get_llm_client(provider, api_key=api_key)
+    provider_info = get_provider(provider)
 
-    client = OpenAI(api_key=key)
     user_text = build_user_payload(
         transcript_payload, frames_manifest, max_slides, audience
     )
 
-    # Multi‑modal message when vision frames are supplied
     if vision_frames:
         user_content: Any = [{"type": "text", "text": user_text}]
         for vf in vision_frames:
@@ -631,7 +635,7 @@ def generate_slide_plan(
         "messages": messages,
         "response_format": {"type": "json_object"},
     }
-    if _is_gpt5_family(model):
+    if provider_info.supports_reasoning_effort and _supports_reasoning_effort(provider):
         create_kwargs["reasoning_effort"] = reasoning_effort or "medium"
     else:
         create_kwargs["temperature"] = temperature
@@ -646,7 +650,7 @@ def generate_slide_plan(
 
     raw = resp.choices[0].message.content
     if not raw:
-        raise RuntimeError("Empty response from OpenAI")
+        raise RuntimeError(f"Empty response from {provider_info.display_name}")
 
     data = json.loads(raw)
     plan = SlidePlan.model_validate(data)
@@ -670,6 +674,51 @@ def generate_slide_plan(
         ]
         plan = plan.model_copy(update={"slides": fixed})
 
+    plan = split_large_vocabulary_slides(plan)
+
     if return_usage:
         return plan, usage_info, raw
     return plan
+
+
+# ---------------------------------------------------------------------------
+# Post-processing: split oversized vocabulary slides
+# ---------------------------------------------------------------------------
+
+_MAX_VOCAB_PER_SLIDE = 8
+
+
+def split_large_vocabulary_slides(plan: SlidePlan) -> SlidePlan:
+    """Split any vocabulary slide with >_MAX_VOCAB_PER_SLIDE items into
+    multiple consecutive slides, each holding at most _MAX_VOCAB_PER_SLIDE words.
+    """
+    new_slides: list[SlideSpec] = []
+    changed = False
+
+    for spec in plan.slides:
+        items = spec.vocab_items or []
+        if spec.slide_type != "vocabulary" or len(items) <= _MAX_VOCAB_PER_SLIDE:
+            new_slides.append(spec)
+            continue
+
+        changed = True
+        chunks = [
+            items[i : i + _MAX_VOCAB_PER_SLIDE]
+            for i in range(0, len(items), _MAX_VOCAB_PER_SLIDE)
+        ]
+        total_parts = len(chunks)
+        for part_idx, chunk in enumerate(chunks, 1):
+            title = (
+                f"{spec.title} ({part_idx}/{total_parts})"
+                if total_parts > 1
+                else spec.title
+            )
+            new_slides.append(
+                spec.model_copy(
+                    update={"title": title, "vocab_items": chunk}
+                )
+            )
+
+    if not changed:
+        return plan
+    return plan.model_copy(update={"slides": new_slides})

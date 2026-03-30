@@ -113,11 +113,13 @@ def _step_plan(
     cb: ProgressCallback,
 ) -> Any:
     from extract_frames import prepare_frames_for_vision
+    from llm_provider import get_provider
     from slide_plan import SlidePlan, generate_slide_plan
 
     cfg = meta.config
-    cb(PipelineStep.PLAN, "running", f"Requesting {cfg.openai_model}…")
-    set_step_running(meta, PipelineStep.PLAN, f"Calling {cfg.openai_model}…")
+    provider_display = get_provider(cfg.llm_provider).display_name
+    cb(PipelineStep.PLAN, "running", f"Requesting {cfg.llm_model} ({provider_display})…")
+    set_step_running(meta, PipelineStep.PLAN, f"Calling {cfg.llm_model} ({provider_display})…")
     t0 = time.perf_counter()
 
     vision_frames = None
@@ -129,16 +131,17 @@ def _step_plan(
     plan, usage_info, raw_response = generate_slide_plan(
         transcript,
         manifest,
-        model=cfg.openai_model,
+        provider=cfg.llm_provider,
+        model=cfg.llm_model,
         max_slides=cfg.max_slides,
         audience=cfg.audience,
         reasoning_effort=cfg.reasoning_effort,
-        temperature=cfg.openai_temperature,
+        temperature=cfg.llm_temperature,
         vision_frames=vision_frames,
         return_usage=True,
     )
 
-    raw_path = os.path.join(work, "openai_raw_response.json")
+    raw_path = os.path.join(work, "llm_raw_response.json")
     with open(raw_path, "w", encoding="utf-8") as f:
         try:
             f.write(json.dumps(json.loads(raw_response), indent=2, ensure_ascii=False))

@@ -16,7 +16,8 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 │
 ├── transcribe.py                   # Step 1 — faster-whisper audio → transcript.json
 ├── extract_frames.py               # Step 2 — FFmpeg frame extraction + Vision API prep
-├── slide_plan.py                   # Step 3 — OpenAI GPT structured output → SlidePlan (Pydantic)
+├── llm_provider.py                 # LLM provider abstraction (OpenAI, MiMo V2, ...)
+├── slide_plan.py                   # Step 3 — LLM structured output → SlidePlan (Pydantic)
 ├── generate_illustrations.py       # Step 4 — (Legacy) DALL-E generation — no longer called
 ├── render_slides.py                # Step 5 — Jinja2 HTML templates + Playwright → 1920×1080 PNGs
 ├── build_pptx.py                   # Step 6 — python-pptx assembles PNGs into .pptx
@@ -99,7 +100,7 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 |---|------|--------|-------|--------|
 | 1 | Transcribe | [`transcribe.py`](transcribe.py) | `video.mp4` | `transcript.json` |
 | 2 | Extract frames | [`extract_frames.py`](extract_frames.py) | `video.mp4` + segments | `frames/*.png`, `frames_manifest.json` |
-| 3 | Slide plan | [`slide_plan.py`](slide_plan.py) | transcript + manifest (+ optional vision frames) | `slide_plan.json` |
+| 3 | Slide plan | [`slide_plan.py`](slide_plan.py) via [`llm_provider.py`](llm_provider.py) | transcript + manifest (+ optional vision frames) | `slide_plan.json` |
 | 4 | Illustrations | [`generate_illustrations.py`](generate_illustrations.py) | (Skipped — no longer used) | — |
 | 5 | Render | [`render_slides.py`](render_slides.py) | plan + frames + illustrations | `rendered_slides/*.png`, `html_debug/*.html` |
 | 6 | Assemble | [`build_pptx.py`](build_pptx.py) | rendered PNGs | `output.pptx` |
@@ -127,8 +128,9 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 | File | Role |
 |------|------|
 | [`transcribe.py`](transcribe.py) | `faster-whisper` model loading + streaming transcription → `{language, duration, segments[{start, end, text}]}` |
-| [`extract_frames.py`](extract_frames.py) | FFmpeg single-frame extraction via `-ss` seek; two strategies: `segment` (one frame per transcript segment) and `interval` (every N seconds); `prepare_frames_for_vision()` resizes + base64-encodes for OpenAI Vision API |
-| [`slide_plan.py`](slide_plan.py) | Pydantic models (`SlidePlan`, `SlideSpec`, `VocabItem`, `DialogueLine`); system prompt for pedagogically ordered slides; OpenAI chat completion with JSON mode; Vision API multi-modal messages; frame_index clamping |
+| [`extract_frames.py`](extract_frames.py) | FFmpeg single-frame extraction via `-ss` seek; two strategies: `segment` (one frame per transcript segment) and `interval` (every N seconds); `prepare_frames_for_vision()` resizes + base64-encodes for Vision API |
+| [`llm_provider.py`](llm_provider.py) | Provider abstraction layer — `LLMProvider` dataclass, `PROVIDERS` registry (OpenAI, Xiaomi MiMo V2), `get_llm_client()` factory returning an `openai.OpenAI` client configured for any provider |
+| [`slide_plan.py`](slide_plan.py) | Pydantic models (`SlidePlan`, `SlideSpec`, `VocabItem`, `DialogueLine`); system prompt for pedagogically ordered slides; LLM chat completion with JSON mode via `llm_provider`; Vision API multi-modal messages; frame_index clamping |
 | [`generate_illustrations.py`](generate_illustrations.py) | (Legacy) DALL-E generation — no longer called by the pipeline |
 | [`render_slides.py`](render_slides.py) | Jinja2 `Environment` loading `templates/`; per-slide context builders; image → base64 data URI embedding; Playwright async screenshot loop (1920×1080); HTML debug output |
 | [`build_pptx.py`](build_pptx.py) | `build_presentation_from_images()` — embeds pre-rendered PNGs as full-slide pictures; `build_presentation_legacy()` — original python-pptx text-based renderer (fallback) |
@@ -192,7 +194,7 @@ ProjectMeta
 ├── status: ProjectStatus  (created | processing | completed | error)
 ├── config: PipelineConfig
 │   ├── whisper_model, compute_type
-│   ├── openai_model, reasoning_effort, openai_temperature
+│   ├── llm_provider, llm_model, reasoning_effort, llm_temperature
 │   ├── max_slides, max_frames, frame_strategy, interval_seconds, frame_offset
 │   ├── audience, use_vision, max_vision_frames
 ├── pipeline: dict[str, StepState]
@@ -215,7 +217,7 @@ ProjectMeta
 | `GET` | `/api/projects/{id}/progress` | SSE event stream |
 | `GET` | `/api/projects/{id}/download` | Download `.pptx` |
 | `GET/PUT` | `/api/projects/{id}/assets/plan` | Read/write `slide_plan.json` |
-| `GET` | `/api/projects/{id}/assets/raw-response` | OpenAI raw response |
+| `GET` | `/api/projects/{id}/assets/raw-response` | LLM raw response |
 | `GET` | `/api/projects/{id}/assets/slides` | List rendered slides |
 | `GET` | `/api/projects/{id}/assets/slides/{idx}` | Slide PNG |
 | `GET/PUT` | `/api/projects/{id}/assets/slides/{idx}/html` | Read/write slide HTML |
@@ -233,7 +235,7 @@ ProjectMeta
 | [`requirements.txt`](requirements.txt) | Python deps: faster-whisper, openai, python-pptx, pydantic, Pillow, Jinja2, playwright, fastapi, uvicorn, sse-starlette |
 | [`Dockerfile`](Dockerfile) | Python 3.10-slim + FFmpeg + PyTorch CPU + Playwright Chromium |
 | [`Dockerfile.gpu`](Dockerfile.gpu) | NVIDIA CUDA 12.4 + cuDNN + PyTorch CUDA + cuBLAS + Playwright Chromium |
-| [`docker-compose.yaml`](docker-compose.yaml) | CPU variant — Web UI on `:8000`; HuggingFace cache volume; `OPENAI_API_KEY` passthrough |
-| [`docker-compose.gpu.yaml`](docker-compose.gpu.yaml) | GPU variant — NVIDIA device reservation; sets `WHISPER_DEVICE=cuda`; same ports & volumes |
+| [`docker-compose.yaml`](docker-compose.yaml) | CPU variant — Web UI on `:8000`; HuggingFace cache volume; `OPENAI_API_KEY` + `MIMO_API_KEY` passthrough |
+| [`docker-compose.gpu.yaml`](docker-compose.gpu.yaml) | GPU variant — NVIDIA device reservation; sets `WHISPER_DEVICE=cuda`; `OPENAI_API_KEY` + `MIMO_API_KEY` passthrough |
 | [`test_overflow.py`](test_overflow.py) | Smoke test for slide overflow rendering |
 | [`.gitignore`](.gitignore) | Ignores `input/`, `output/`, `projects/`, `.env`, `__pycache__/` |

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 PROJECTS_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projects")
 
@@ -52,9 +52,10 @@ class PipelineConfig(BaseModel):
     whisper_device: str = Field(
         default_factory=lambda: os.environ.get("WHISPER_DEVICE", "auto"),
     )
-    openai_model: str = "gpt-4.1"
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4.1"
     reasoning_effort: str = "medium"
-    openai_temperature: float = 0.6
+    llm_temperature: float = 0.6
     max_slides: int = 12
     max_frames: int | None = None
     frame_strategy: str = "segment"
@@ -63,6 +64,22 @@ class PipelineConfig(BaseModel):
     audience: str | None = None
     use_vision: bool = False
     max_vision_frames: int = 8
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_openai_fields(cls, data: Any) -> Any:
+        """Accept legacy ``openai_model`` / ``openai_temperature`` from
+        existing ``project.json`` files and map them to the new names."""
+        if isinstance(data, dict):
+            if "openai_model" in data and "llm_model" not in data:
+                data["llm_model"] = data.pop("openai_model")
+            elif "openai_model" in data:
+                data.pop("openai_model")
+            if "openai_temperature" in data and "llm_temperature" not in data:
+                data["llm_temperature"] = data.pop("openai_temperature")
+            elif "openai_temperature" in data:
+                data.pop("openai_temperature")
+        return data
 
 
 class ProjectMeta(BaseModel):

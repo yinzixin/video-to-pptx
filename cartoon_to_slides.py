@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI: cartoon video -> transcript JSON -> frames -> OpenAI slide plan -> .pptx"""
+"""CLI: cartoon video -> transcript JSON -> frames -> LLM slide plan -> .pptx"""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from extract_frames import (
     load_manifest,
     prepare_frames_for_vision,
 )
+from llm_provider import get_provider, provider_names
 from render_slides import render_slides
 from slide_plan import generate_slide_plan
 
@@ -60,22 +61,33 @@ def parse_args() -> argparse.Namespace:
         help="Whisper compute type (default: auto — float16 for cuda, int8 for cpu)",
     )
     p.add_argument(
+        "--llm-provider",
+        default="openai",
+        choices=provider_names(),
+        help=f"LLM provider for slide planning (default: openai). "
+        f"Choices: {', '.join(provider_names())}",
+    )
+    p.add_argument(
+        "--llm-model",
         "--openai-model",
-        default="gpt-4.1",
-        help="OpenAI chat model for slide planning (default: gpt-4.1)",
+        default=None,
+        dest="llm_model",
+        help="LLM model for slide planning (default: provider's default model)",
     )
     p.add_argument(
         "--reasoning-effort",
         default="medium",
         choices=("none", "low", "medium", "high", "xhigh"),
-        help="For gpt-5.* models: reasoning effort (default: medium). "
-        "Ignored for other models.",
+        help="Reasoning effort for models that support it (default: medium). "
+        "Ignored for other providers/models.",
     )
     p.add_argument(
+        "--llm-temperature",
         "--openai-temperature",
         type=float,
         default=0.6,
-        help="Temperature for non-gpt-5 models only (default: 0.6).",
+        dest="llm_temperature",
+        help="Temperature for LLM generation (default: 0.6).",
     )
     p.add_argument(
         "--max-slides",
@@ -203,23 +215,27 @@ def run_pipeline(video: str, work: str, out_pptx: str, args: argparse.Namespace)
 
     renderer_name = "legacy (python-pptx)" if args.legacy_renderer else "rich (HTML+Playwright)"
 
+    provider_info = get_provider(args.llm_provider)
+    llm_model = args.llm_model or provider_info.default_model
+
     print("[cartoon_to_slides] Starting pipeline", flush=True)
     print(f"  Video:     {video}", flush=True)
     print(f"  Work dir:  {work}", flush=True)
     print(f"  Output:    {out_pptx}", flush=True)
     print(
-        f"  Options:   whisper={args.whisper_model!r}, openai={args.openai_model!r}, "
+        f"  Options:   whisper={args.whisper_model!r}, "
+        f"llm={provider_info.display_name}/{llm_model!r}, "
         f"max_slides={args.max_slides}, frame_strategy={args.frame_strategy!r}",
         flush=True,
     )
-    if args.openai_model.lower().startswith("gpt-5"):
+    if provider_info.supports_reasoning_effort:
         print(
-            f"  GPT-5:     reasoning_effort={args.reasoning_effort!r}",
+            f"  Reasoning: effort={args.reasoning_effort!r}",
             flush=True,
         )
     else:
         print(
-            f"  OpenAI:    temperature={args.openai_temperature}",
+            f"  LLM:       temperature={args.llm_temperature}",
             flush=True,
         )
     print(
@@ -334,19 +350,20 @@ def run_pipeline(video: str, work: str, out_pptx: str, args: argparse.Namespace)
             flush=True,
         )
 
-    # --- 3. OpenAI ---
-    step = "[3/4] Slide plan (OpenAI)"
+    # --- 3. LLM slide plan ---
+    step = f"[3/4] Slide plan ({provider_info.display_name})"
     mode_str = "vision + text" if vision_frames else "text only"
-    print(f"{step}: requesting {args.openai_model!r} ({mode_str})…", flush=True)
+    print(f"{step}: requesting {llm_model!r} ({mode_str})…", flush=True)
     t_step = time.perf_counter()
     plan, usage_info, raw_response = generate_slide_plan(
         payload,
         manifest,
-        model=args.openai_model,
+        provider=args.llm_provider,
+        model=llm_model,
         max_slides=args.max_slides,
         audience=args.audience,
         reasoning_effort=args.reasoning_effort,
-        temperature=args.openai_temperature,
+        temperature=args.llm_temperature,
         vision_frames=vision_frames,
         return_usage=True,
     )
@@ -366,13 +383,13 @@ def run_pipeline(video: str, work: str, out_pptx: str, args: argparse.Namespace)
         flush=True,
     )
 
-    raw_path = os.path.join(work, "openai_raw_response.json")
+    raw_path = os.path.join(work, "llm_raw_response.json")
     with open(raw_path, "w", encoding="utf-8") as f:
         try:
             f.write(json.dumps(json.loads(raw_response), indent=2, ensure_ascii=False))
         except (json.JSONDecodeError, TypeError):
             f.write(raw_response)
-    print(f"{step}: raw OpenAI response saved to {raw_path}", flush=True)
+    print(f"{step}: raw LLM response saved to {raw_path}", flush=True)
 
     plan_path = os.path.join(work, "slide_plan.json")
     with open(plan_path, "w", encoding="utf-8") as f:

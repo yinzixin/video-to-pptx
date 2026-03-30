@@ -53,8 +53,17 @@
         <summary>Advanced Settings</summary>
         <div class="form-grid">
           <div class="form-group">
-            <label for="openai_model">OpenAI Model</label>
-            <input type="text" id="openai_model" name="openai_model" value="gpt-4.1">
+            <label for="llm_provider">LLM Provider</label>
+            <select id="llm_provider" name="llm_provider" onchange="onProviderChange()">
+              {% for p in llm_providers %}
+              <option value="{{ p.name }}" data-default-model="{{ p.default_model }}"
+                {% if p.name == 'openai' %}selected{% endif %}>{{ p.display_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="llm_model">LLM Model</label>
+            <input type="text" id="llm_model" name="llm_model" value="gpt-4.1">
           </div>
           <div class="form-group">
             <label for="reasoning_effort">Reasoning Effort</label>
@@ -92,4 +101,12 @@
     </form>
   </div>
 </div>
+
+<script>
+function onProviderChange() {
+  const sel = document.getElementById('llm_provider');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('llm_model').value = opt.dataset.defaultModel || '';
+}
+</script>
 {% endblock %}

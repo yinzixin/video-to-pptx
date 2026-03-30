@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sse_starlette.sse import EventSourceResponse
 
+from llm_provider import provider_choices
 from pipeline_runner import run_pipeline, rerender_from_html
 from project_manager import (
     PIPELINE_STEP_ORDER,
@@ -83,7 +84,11 @@ async def page_projects(request: Request):
         thumbnails[p.id] = f"/api/projects/{p.id}/assets/thumbnail" if fp else None
     return templates.TemplateResponse(
         request, "projects.html",
-        context={"projects": projects, "thumbnails": thumbnails},
+        context={
+            "projects": projects,
+            "thumbnails": thumbnails,
+            "llm_providers": provider_choices(),
+        },
     )
 
 
@@ -137,10 +142,12 @@ async def page_edit_plan(request: Request, project_id: str):
             plan_data = f.read()
 
     raw_data = ""
-    raw_path = os.path.join(work, "openai_raw_response.json")
-    if os.path.isfile(raw_path):
-        with open(raw_path, encoding="utf-8") as f:
-            raw_data = f.read()
+    for raw_name in ("llm_raw_response.json", "openai_raw_response.json"):
+        raw_path = os.path.join(work, raw_name)
+        if os.path.isfile(raw_path):
+            with open(raw_path, encoding="utf-8") as f:
+                raw_data = f.read()
+            break
 
     return templates.TemplateResponse(
         request, "edit_slide_plan.html",
@@ -202,8 +209,8 @@ async def api_create_project(request: Request):
 
     config: dict[str, Any] = {}
     for key in (
-        "whisper_model", "whisper_device", "openai_model", "reasoning_effort",
-        "audience", "frame_strategy",
+        "whisper_model", "whisper_device", "llm_provider", "llm_model",
+        "reasoning_effort", "audience", "frame_strategy",
     ):
         val = form.get(key)
         if val:
@@ -215,7 +222,7 @@ async def api_create_project(request: Request):
                 config[key] = int(val)
             except ValueError:
                 pass
-    for key in ("openai_temperature", "interval_seconds", "frame_offset"):
+    for key in ("llm_temperature", "interval_seconds", "frame_offset"):
         val = form.get(key)
         if val:
             try:
@@ -489,12 +496,13 @@ async def api_update_plan(project_id: str, request: Request):
 @app.get("/api/projects/{project_id}/assets/raw-response")
 async def api_get_raw_response(project_id: str):
     work = project_dir(project_id)
-    path = os.path.join(work, "openai_raw_response.json")
-    if not os.path.isfile(path):
-        raise HTTPException(404)
-    with open(path, encoding="utf-8") as f:
-        content = f.read()
-    return JSONResponse({"raw": content})
+    for raw_name in ("llm_raw_response.json", "openai_raw_response.json"):
+        path = os.path.join(work, raw_name)
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+            return JSONResponse({"raw": content})
+    raise HTTPException(404)
 
 
 @app.get("/api/projects/{project_id}/download")
