@@ -125,16 +125,35 @@ Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For oth
 
 ## Setup
 
-- Install [FFmpeg](https://ffmpeg.org/) and Python 3.10+.
-- `pip install -r requirements.txt` (PyTorch: use CPU index from the Dockerfile if needed.)
-- `playwright install chromium` (for the rich renderer)
-- Set `OPENAI_API_KEY` in the environment.
+1. Install [FFmpeg](https://ffmpeg.org/) and Python 3.10+.
+2. `pip install -r requirements.txt` (PyTorch: use CPU index from the Dockerfile if needed.)
+3. `playwright install chromium` (for the rich renderer)
+4. Set your OpenAI API key (required for slide planning, Vision API, and DALL-E illustrations):
+
+   ```bash
+   # Option A — export directly (Linux / macOS / Git Bash)
+   export OPENAI_API_KEY="sk-..."
+
+   # Option A — PowerShell
+   $env:OPENAI_API_KEY = "sk-..."
+
+   # Option B — create a .env file in the project root (git-ignored)
+   echo OPENAI_API_KEY=sk-... > .env
+   ```
+
+   The pipeline reads `OPENAI_API_KEY` from the environment at runtime. A `.env` file in the project root is loaded automatically by Docker Compose and can also be loaded in local runs with a library like `python-dotenv`.
 
 ## Container
 
-### CPU (default)
+Both Docker Compose files pass `OPENAI_API_KEY` into the container via `${OPENAI_API_KEY}`. The easiest way to provide it is a `.env` file in the project root (already in `.gitignore`):
 
-Build the image (includes Playwright Chromium), pass `OPENAI_API_KEY`, mount the project:
+```
+OPENAI_API_KEY=sk-...
+```
+
+Docker Compose reads `.env` automatically — no extra flags needed.
+
+### CPU (default)
 
 ```bash
 docker compose up --build              # Web UI on :8000
