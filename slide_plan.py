@@ -683,42 +683,69 @@ def generate_slide_plan(
 
 
 # ---------------------------------------------------------------------------
-# Post-processing: split oversized vocabulary slides
+# Post-processing: split oversized slides
 # ---------------------------------------------------------------------------
 
 _MAX_VOCAB_PER_SLIDE = 8
+_MAX_PHRASES_PER_SLIDE = 4
 
 
 def split_large_vocabulary_slides(plan: SlidePlan) -> SlidePlan:
-    """Split any vocabulary slide with >_MAX_VOCAB_PER_SLIDE items into
-    multiple consecutive slides, each holding at most _MAX_VOCAB_PER_SLIDE words.
+    """Split vocabulary (>8 vocab_items) and key_phrases (>4 bullets) slides
+    into multiple consecutive slides so each stays within its layout limit.
     """
     new_slides: list[SlideSpec] = []
     changed = False
 
     for spec in plan.slides:
-        items = spec.vocab_items or []
-        if spec.slide_type != "vocabulary" or len(items) <= _MAX_VOCAB_PER_SLIDE:
-            new_slides.append(spec)
-            continue
-
-        changed = True
-        chunks = [
-            items[i : i + _MAX_VOCAB_PER_SLIDE]
-            for i in range(0, len(items), _MAX_VOCAB_PER_SLIDE)
-        ]
-        total_parts = len(chunks)
-        for part_idx, chunk in enumerate(chunks, 1):
-            title = (
-                f"{spec.title} ({part_idx}/{total_parts})"
-                if total_parts > 1
-                else spec.title
-            )
-            new_slides.append(
-                spec.model_copy(
-                    update={"title": title, "vocab_items": chunk}
+        if spec.slide_type == "vocabulary":
+            items = spec.vocab_items or []
+            if len(items) <= _MAX_VOCAB_PER_SLIDE:
+                new_slides.append(spec)
+                continue
+            changed = True
+            chunks = [
+                items[i : i + _MAX_VOCAB_PER_SLIDE]
+                for i in range(0, len(items), _MAX_VOCAB_PER_SLIDE)
+            ]
+            total_parts = len(chunks)
+            for part_idx, chunk in enumerate(chunks, 1):
+                title = (
+                    f"{spec.title} ({part_idx}/{total_parts})"
+                    if total_parts > 1
+                    else spec.title
                 )
-            )
+                new_slides.append(
+                    spec.model_copy(
+                        update={"title": title, "vocab_items": chunk}
+                    )
+                )
+
+        elif spec.slide_type == "key_phrases":
+            bullets = spec.bullets or []
+            if len(bullets) <= _MAX_PHRASES_PER_SLIDE:
+                new_slides.append(spec)
+                continue
+            changed = True
+            chunks = [
+                bullets[i : i + _MAX_PHRASES_PER_SLIDE]
+                for i in range(0, len(bullets), _MAX_PHRASES_PER_SLIDE)
+            ]
+            total_parts = len(chunks)
+            for part_idx, chunk in enumerate(chunks, 1):
+                title = (
+                    f"{spec.title} ({part_idx}/{total_parts})"
+                    if total_parts > 1
+                    else spec.title
+                )
+                new_slides.append(
+                    spec.model_copy(
+                        update={"title": title, "bullets": chunk}
+                    )
+                )
+
+        else:
+            new_slides.append(spec)
 
     if not changed:
         return plan
