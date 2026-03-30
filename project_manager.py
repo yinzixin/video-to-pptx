@@ -48,7 +48,10 @@ class StepState(BaseModel):
 
 class PipelineConfig(BaseModel):
     whisper_model: str = "base"
-    compute_type: str = "int8"
+    compute_type: str | None = None
+    whisper_device: str = Field(
+        default_factory=lambda: os.environ.get("WHISPER_DEVICE", "auto"),
+    )
     openai_model: str = "gpt-5.4"
     reasoning_effort: str = "medium"
     openai_temperature: float = 0.6

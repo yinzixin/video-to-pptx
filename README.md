@@ -107,6 +107,8 @@ Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For oth
 
 | Flag | Description |
 |---|---|
+| `--whisper-device` | Whisper device: `auto` (default), `cuda`, or `cpu` |
+| `--compute-type` | Compute precision (default: auto — `float16` for cuda, `int8` for cpu) |
 | `--no-illustrations` | Skip DALL-E image generation (faster, cheaper) |
 | `--dalle-model` | DALL-E model to use (default: `dall-e-3`) |
 | `--legacy-renderer` | Use the original python-pptx text renderer |
@@ -119,7 +121,7 @@ Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For oth
 
 ### All options
 
-`--whisper-model`, `--openai-model`, `--reasoning-effort` (`none|low|medium|high|xhigh`, gpt-5.* only), `--openai-temperature`, `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--no-illustrations`, `--dalle-model`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
+`--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--openai-model`, `--reasoning-effort` (`none|low|medium|high|xhigh`, gpt-5.* only), `--openai-temperature`, `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--no-illustrations`, `--dalle-model`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
 
 ## Setup
 
@@ -130,11 +132,33 @@ Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For oth
 
 ## Container
 
+### CPU (default)
+
 Build the image (includes Playwright Chromium), pass `OPENAI_API_KEY`, mount the project:
 
 ```bash
-podman compose run --rm whisper python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+docker compose up --build              # Web UI on :8000
+docker compose run --rm whisper \
+  python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
 ```
+
+### GPU (NVIDIA CUDA)
+
+Uses `Dockerfile.gpu` (NVIDIA CUDA 12.4 + cuDNN base image) and `docker-compose.gpu.yaml` (GPU reservation + `WHISPER_DEVICE=cuda`).
+
+**Prerequisites on the Docker host:**
+
+1. NVIDIA GPU with CUDA support
+2. [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) installed
+3. Verify with: `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi`
+
+```bash
+docker compose -f docker-compose.gpu.yaml up --build     # Web UI on :8000 with GPU
+docker compose -f docker-compose.gpu.yaml run --rm whisper \
+  python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
+```
+
+GPU acceleration uses `float16` compute by default (vs `int8` on CPU) and provides ~5-10x faster transcription, especially with larger Whisper models like `large-v3`.
 
 ### Cost estimate per lesson
 

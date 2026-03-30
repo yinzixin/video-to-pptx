@@ -202,7 +202,7 @@ async def api_create_project(request: Request):
 
     config: dict[str, Any] = {}
     for key in (
-        "whisper_model", "openai_model", "reasoning_effort",
+        "whisper_model", "whisper_device", "openai_model", "reasoning_effort",
         "dalle_model", "audience", "frame_strategy",
     ):
         val = form.get(key)

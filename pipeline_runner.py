@@ -54,6 +54,7 @@ def _step_transcribe(
     payload = transcribe_video(
         video,
         whisper_model=meta.config.whisper_model,
+        device=meta.config.whisper_device,
         compute_type=meta.config.compute_type,
     )
     save_transcript_json(payload, transcript_path)

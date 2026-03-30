@@ -1,0 +1,32 @@
+services:
+  whisper:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    container_name: whisper_gpu
+
+    volumes:
+      - .:/app
+      - hf-cache:/root/.cache/huggingface
+
+    working_dir: /app
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WHISPER_DEVICE=cuda
+
+    command: python -m uvicorn app:app --host 0.0.0.0 --port 8000
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  hf-cache:

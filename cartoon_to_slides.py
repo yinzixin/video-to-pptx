@@ -43,9 +43,14 @@ def parse_args() -> argparse.Namespace:
         help="faster-whisper model name (default: base)",
     )
     p.add_argument(
+        "--whisper-device",
+        default="auto",
+        help="Device for faster-whisper: auto, cuda, or cpu (default: auto)",
+    )
+    p.add_argument(
         "--compute-type",
-        default="int8",
-        help="Whisper compute type (default: int8)",
+        default=None,
+        help="Whisper compute type (default: auto — float16 for cuda, int8 for cpu)",
     )
     p.add_argument(
         "--openai-model",
@@ -246,6 +251,7 @@ def main() -> int:
         payload = transcribe_video(
             video,
             whisper_model=args.whisper_model,
+            device=args.whisper_device,
             compute_type=args.compute_type,
         )
         save_transcript_json(payload, transcript_path)

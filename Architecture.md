@@ -49,8 +49,10 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 ├── test_overflow.py                # Smoke test: key_scene overflow + vocabulary rendering
 │
 ├── requirements.txt                # Python dependencies (pinned lower bounds)
-├── Dockerfile                      # Python 3.10 + FFmpeg + Playwright Chromium
-├── docker-compose.yaml             # Service definition (web UI on :8000, CLI via run)
+├── Dockerfile                      # Python 3.10 + FFmpeg + Playwright Chromium (CPU)
+├── Dockerfile.gpu                  # NVIDIA CUDA 12.4 + cuDNN + PyTorch CUDA + Playwright
+├── docker-compose.yaml             # Service definition (web UI on :8000, CLI via run) — CPU
+├── docker-compose.gpu.yaml         # GPU variant — NVIDIA runtime, CUDA device reservation
 ├── .gitignore
 └── README.md
 ```
@@ -231,6 +233,8 @@ ProjectMeta
 |------|---------|
 | [`requirements.txt`](requirements.txt) | Python deps: faster-whisper, openai, python-pptx, pydantic, Pillow, Jinja2, playwright, fastapi, uvicorn, sse-starlette |
 | [`Dockerfile`](Dockerfile) | Python 3.10-slim + FFmpeg + PyTorch CPU + Playwright Chromium |
-| [`docker-compose.yaml`](docker-compose.yaml) | Web UI on `:8000`; HuggingFace cache volume; `OPENAI_API_KEY` passthrough |
+| [`Dockerfile.gpu`](Dockerfile.gpu) | NVIDIA CUDA 12.4 + cuDNN + PyTorch CUDA + cuBLAS + Playwright Chromium |
+| [`docker-compose.yaml`](docker-compose.yaml) | CPU variant — Web UI on `:8000`; HuggingFace cache volume; `OPENAI_API_KEY` passthrough |
+| [`docker-compose.gpu.yaml`](docker-compose.gpu.yaml) | GPU variant — NVIDIA device reservation; sets `WHISPER_DEVICE=cuda`; same ports & volumes |
 | [`test_overflow.py`](test_overflow.py) | Smoke test for slide overflow rendering |
 | [`.gitignore`](.gitignore) | Ignores `input/`, `output/`, `projects/`, `.env`, `__pycache__/` |

@@ -7,25 +7,54 @@ from faster_whisper import WhisperModel
 INPUT_FILE = "input/1.mp4"
 OUTPUT_FILE = "output/result1.txt"
 
+_COMPUTE_TYPE_DEFAULTS = {"cuda": "float16", "cpu": "int8"}
+
+
+def _resolve_device(device: str) -> str:
+    """Return 'cuda' or 'cpu'. 'auto' probes for a usable GPU."""
+    if device != "auto":
+        return device
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        pass
+    try:
+        import ctranslate2
+        if "cuda" in ctranslate2.get_supported_compute_types("cuda"):
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
+
 
 def transcribe_video(
     video_path: str,
     *,
     whisper_model: str = "base",
-    compute_type: str = "int8",
+    device: str = "auto",
+    compute_type: str | None = None,
     verbose: bool = True,
 ) -> dict[str, Any]:
     """
     Transcribe audio with faster-whisper and return structured data:
     language, duration, segments[{start, end, text}].
+
+    device: 'auto' (default) probes for CUDA, falls back to CPU.
+    compute_type: if None, picks a sensible default for the resolved device
+                  (float16 for cuda, int8 for cpu).
     """
+    device = _resolve_device(device)
+    if compute_type is None:
+        compute_type = _COMPUTE_TYPE_DEFAULTS.get(device, "int8")
+
     if verbose:
         print(
             f"[transcribe] Loading Whisper model {whisper_model!r} "
-            f"(compute_type={compute_type})…",
+            f"(device={device}, compute_type={compute_type})…",
             flush=True,
         )
-    model = WhisperModel(whisper_model, compute_type=compute_type)
+    model = WhisperModel(whisper_model, device=device, compute_type=compute_type)
     if verbose:
         print(
             f"[transcribe] Decoding {video_path!r} (streaming segments)…",
