@@ -191,19 +191,21 @@ async def _screenshot_slides(
     height: int = 1080,
     verbose: bool = True,
 ) -> list[str]:
-    """Use Playwright to screenshot each HTML slide to a PNG."""
+    """Use Playwright to screenshot each HTML slide to a PNG (parallel)."""
     from playwright.async_api import async_playwright
 
     os.makedirs(output_dir, exist_ok=True)
-    paths: list[str] = []
+    total = len(html_slides)
+    paths: list[str | None] = [None] * total
+    concurrency = min(total, os.cpu_count() or 4, 6)
+    sem = asyncio.Semaphore(concurrency)
+    done_count = 0
 
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
-
-        for idx, html in enumerate(html_slides):
+    async def _render_one(idx: int, html: str, browser: Any) -> None:
+        nonlocal done_count
+        async with sem:
             page = await browser.new_page(viewport={"width": width, "height": height})
             await page.set_content(html, wait_until="networkidle")
-            # Wait for Google Fonts
             try:
                 await page.evaluate("document.fonts.ready")
             except Exception:
@@ -212,17 +214,23 @@ async def _screenshot_slides(
             out_path = os.path.join(output_dir, f"slide_{idx:03d}.png")
             await page.screenshot(path=out_path, full_page=False)
             await page.close()
-            paths.append(os.path.abspath(out_path))
-
+            paths[idx] = os.path.abspath(out_path)
+            done_count += 1
             if verbose:
                 print(
-                    f"    rendered slide {idx + 1}/{len(html_slides)} -> {out_path}",
+                    f"    rendered slide {done_count}/{total} "
+                    f"(slide_{idx:03d}) -> {out_path}",
                     flush=True,
                 )
 
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        await asyncio.gather(
+            *[_render_one(i, h, browser) for i, h in enumerate(html_slides)]
+        )
         await browser.close()
 
-    return paths
+    return [p for p in paths if p is not None]
 
 
 def render_slides(
