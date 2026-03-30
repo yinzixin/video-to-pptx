@@ -143,18 +143,19 @@ SLIDE ORDER
    • `bullets`: "1. First, …", "2. Then, …", "3. In the end, …"
    • Each step = ONE tiny sentence (6‑8 words max).
 
-3. `"key_scene"` — 1‑2 slides, MUST HAVE
-   The coolest moment! Big picture, a little dialogue.
-   • `bullets`: just ONE sentence saying what happens.
-   • `scene_dialogue`: max 3‑4 lines of [{speaker, line}].
-   • Pick `frame_index` of the most exciting frame.
-
-4. `"vocabulary"` — 1 slide, MUST HAVE
+3. `"vocabulary"` — 1 slide, MUST HAVE
    Teach 4‑6 words (not more!). Keep it visual.
    • `vocab_items`: [{word, pos, definition, example, illustration_prompt}]
      – `definition`: 4‑6 words max, like talking to a 6‑year‑old
      – `example`: short quote from the cartoon
    • Pick easy, common words kids will use again.
+
+4. `"key_scene"` — 1+ slides, MUST HAVE
+   The coolest moment! Big picture, a little dialogue.
+   • `bullets`: just ONE sentence saying what happens.
+   • `scene_dialogue`: max 3‑4 lines of [{speaker, line}].
+   • Pick `frame_index` of the most exciting frame.
+   • See LONG TRANSCRIPT RULE below for how many key_scene slides to use.
 
 5. `"key_phrases"` — 0‑1 slide, NICE TO HAVE
    2‑4 fun phrases kids can say!
@@ -174,6 +175,22 @@ SLIDE ORDER
    2‑3 "What about you?" questions.
    • `bullets`: start with "Do you …", "What would you …"
    • `teacher_notes`: pair / group / class.
+
+─────────────────────────────────────────────────────
+LONG TRANSCRIPT RULE
+─────────────────────────────────────────────────────
+
+When the transcript is LONG (high word count, many segments, or high \
+dialogue density), follow this rule strictly:
+
+• Every NON‑key_scene slide type gets AT MOST 1 slide.
+  That means: 1 story_intro, 1 plot_summary, 1 vocabulary, 0‑1 key_phrases,
+  1 comprehension, 1 moral_lesson, 0‑1 discussion.
+• ALL remaining slide slots (up to the max_slides limit) should be \
+  filled with additional `"key_scene"` slides, each covering a different \
+  important moment from the episode.
+• Spread key_scene slides across the timeline — pick varied frame indices \
+  and different dialogue excerpts so the whole story is covered visually.
 
 ─────────────────────────────────────────────────────
 ILLUSTRATION PROMPTS — BIG, BOLD, SUPER CUTE!

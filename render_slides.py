@@ -171,14 +171,6 @@ def _render_html_slides(
         plan, frames_manifest, video_basename
     )))
 
-    has_overview = (
-        plan.story_summary or plan.moral
-        or plan.learning_objectives or plan.teaching_rationale
-    )
-    if has_overview:
-        overview_tpl = env.get_template("overview.html")
-        html_slides.append(overview_tpl.render(**_build_overview_context(plan)))
-
     for i, spec in enumerate(plan.slides):
         tpl_name = f"{spec.slide_type}.html"
         try:

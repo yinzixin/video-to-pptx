@@ -567,15 +567,6 @@ def build_presentation_legacy(
 
     _add_title_slide(prs, plan.lesson_title, f"Source: {video_basename}")
 
-    has_overview = (
-        plan.story_summary
-        or plan.moral
-        or plan.learning_objectives
-        or plan.teaching_rationale
-    )
-    if has_overview:
-        _add_overview_slide(prs, plan)
-
     for spec in plan.slides:
         img_path: str | None = None
         if frames and 0 <= spec.frame_index < len(frames):
