@@ -13,6 +13,9 @@ from typing import Any, Literal
 
 FrameStrategy = Literal["segment", "interval"]
 
+_BLACK_SKIP_STEP = 1.0  # seconds to advance when a black frame is detected
+_BLACK_SKIP_MAX = 5.0   # max total seconds to advance looking for non-black frame
+
 
 @dataclass
 class FrameEntry:
@@ -43,6 +46,68 @@ def _run_ffmpeg_ss(video_path: str, t_sec: float, out_path: str) -> None:
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"ffmpeg failed at {t_sec}s: {r.stderr or r.stdout}")
+
+
+def _is_black_frame(
+    image_path: str,
+    pixel_threshold: int = 20,
+    black_ratio: float = 0.97,
+) -> bool:
+    """Return True if the image is predominantly black (e.g. video intro)."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    if not os.path.isfile(image_path):
+        return False
+    img = Image.open(image_path).convert("L")  # greyscale
+    pixels = list(img.getdata())
+    if not pixels:
+        return True
+    dark_count = sum(1 for p in pixels if p < pixel_threshold)
+    return dark_count / len(pixels) >= black_ratio
+
+
+def _extract_skip_black(
+    video_path: str,
+    t_sec: float,
+    out_path: str,
+    *,
+    duration: float | None = None,
+    verbose: bool = True,
+) -> float:
+    """Extract a frame; if it's black, advance up to *_BLACK_SKIP_MAX* seconds.
+
+    Returns the actual timestamp used.
+    """
+    _run_ffmpeg_ss(video_path, t_sec, out_path)
+    if not _is_black_frame(out_path):
+        return t_sec
+
+    original_t = t_sec
+    advanced = 0.0
+    while advanced < _BLACK_SKIP_MAX:
+        advanced += _BLACK_SKIP_STEP
+        candidate = original_t + advanced
+        if duration is not None and candidate >= duration:
+            break
+        _run_ffmpeg_ss(video_path, candidate, out_path)
+        if not _is_black_frame(out_path):
+            if verbose:
+                print(
+                    f"    [skip-black] skipped black frame at {original_t:.2f}s, "
+                    f"using {candidate:.2f}s instead",
+                    flush=True,
+                )
+            return candidate
+
+    if verbose:
+        print(
+            f"    [skip-black] could not find non-black frame near {original_t:.2f}s, "
+            f"keeping best attempt at {original_t + advanced:.2f}s",
+            flush=True,
+        )
+    return original_t + advanced
 
 
 def _count_interval_extractions(
@@ -111,7 +176,12 @@ def extract_frames(
                     f"  [{n + 1}/{total}] t={t:.2f}s seg#{i} -> {name}",
                     flush=True,
                 )
-            _run_ffmpeg_ss(video_path, t, out_path)
+            if n == 0:
+                t = _extract_skip_black(
+                    video_path, t, out_path, verbose=verbose,
+                )
+            else:
+                _run_ffmpeg_ss(video_path, t, out_path)
             entries.append(
                 FrameEntry(
                     path=os.path.abspath(out_path),
@@ -139,7 +209,13 @@ def extract_frames(
                     f"  [{n + 1}/{total}] t={t:.2f}s -> {name}",
                     flush=True,
                 )
-            _run_ffmpeg_ss(video_path, t, out_path)
+            if n == 0:
+                t = _extract_skip_black(
+                    video_path, t, out_path,
+                    duration=duration, verbose=verbose,
+                )
+            else:
+                _run_ffmpeg_ss(video_path, t, out_path)
             entries.append(
                 FrameEntry(
                     path=os.path.abspath(out_path),

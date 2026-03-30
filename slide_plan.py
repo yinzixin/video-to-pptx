@@ -398,7 +398,7 @@ SLIDE ORDER
    • Pick `frame_index` of the most impactful frame.
    • See LONG TRANSCRIPT RULE below for how many key_scene slides to use.
 
-5. `"key_phrases"` — 0‑1 slide, NICE TO HAVE
+5. `"key_phrases"` — 1 slide, MUST HAVE
    {p['key_phrases_note']}
    • `bullets`: the phrase + brief usage note.
 
@@ -420,7 +420,7 @@ When the transcript is LONG (high word count, many segments, or high \
 dialogue density), follow this rule strictly:
 
 • Every NON‑key_scene slide type gets AT MOST 1 slide.
-  That means: 1 story_intro, 1 plot_summary, 1 vocabulary, 0‑1 key_phrases,
+  That means: 1 story_intro, 1 plot_summary, 1 vocabulary, 1 key_phrases,
   1 comprehension, 1 moral_lesson, 0‑1 discussion.
 • ALL remaining slide slots (up to the max_slides limit) should be \
   filled with additional `"key_scene"` slides, each covering a different \
@@ -505,6 +505,7 @@ def build_user_payload(
         + ")",
         json.dumps(frame_summary, indent=2),
         f"\n## Constraint: at most {max_slides} content slides in `slides`.",
+        '\nInclude exactly one slide with `slide_type` "key_phrases".',
     ]
     if audience:
         parts.append(

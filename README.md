@@ -59,7 +59,7 @@ All templates extend `base.html` (shared layout, fonts, and CSS). The presentati
 | 4 | `plot_summary.html` | Must have | Chronological steps with arrow flow | Video frame |
 | 5 | `key_scene.html` | Must have (1-2) | Coolest moment + dialogue bubbles | Video frame |
 | 6 | `vocabulary.html` | Must have | 4-6 word cards in a 2×N grid | Video frame |
-| 7 | `key_phrases.html` | Nice to have | Fun phrases as colorful boxes | Video frame |
+| 7 | `key_phrases.html` | Must have | Fun phrases as colorful boxes | Video frame |
 | 8 | `comprehension.html` | Must have | Q&A quiz pairs | Video frame |
 | 9 | `moral_lesson.html` | Must have | Big takeaway in a decorative card | Video frame |
 | 10 | `discussion.html` | Nice to have | "What about you?" prompts | Video frame |
