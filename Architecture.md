@@ -17,7 +17,7 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 ├── transcribe.py                   # Step 1 — faster-whisper audio → transcript.json
 ├── extract_frames.py               # Step 2 — FFmpeg frame extraction + Vision API prep
 ├── slide_plan.py                   # Step 3 — OpenAI GPT structured output → SlidePlan (Pydantic)
-├── generate_illustrations.py       # Step 4 — DALL-E image generation (SHA-1 dedup + cache)
+├── generate_illustrations.py       # Step 4 — (Legacy) DALL-E generation — no longer called
 ├── render_slides.py                # Step 5 — Jinja2 HTML templates + Playwright → 1920×1080 PNGs
 ├── build_pptx.py                   # Step 6 — python-pptx assembles PNGs into .pptx
 │
@@ -28,10 +28,10 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 │   ├── story_intro.html            #   Characters & setting
 │   ├── plot_summary.html           #   Chronological story steps
 │   ├── key_scene.html              #   Highlight moment + dialogue bubbles
-│   ├── vocabulary.html             #   Word cards in 2×N grid (DALL-E per-word illustrations)
+│   ├── vocabulary.html             #   Word cards in 2×N grid
 │   ├── key_phrases.html            #   Fun phrases as colorful boxes
 │   ├── comprehension.html          #   Q&A quiz pairs
-│   ├── moral_lesson.html           #   Big takeaway card (DALL-E slide illustration)
+│   ├── moral_lesson.html           #   Big takeaway card
 │   └── discussion.html             #   "What about you?" prompts
 │
 ├── web_templates/                  # Jinja2 pages for the browser-based Web UI
@@ -76,8 +76,8 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
                                                     │                            │
                                                     ▼                            ▼
                                           ┌───────────────────────┐   ┌──────────────┐
-                                          │ generate_illustrations │   │ render_slides │
-                                          │   (DALL-E, optional)   │──►│ (Jinja2 +    │
+                                          │   (illustrations      │   │ render_slides │
+                                          │    step — skipped)    │──►│ (Jinja2 +    │
                                           └───────────────────────┘   │  Playwright)  │
                                                                       └──────────────┘
                                                                              │
@@ -99,8 +99,8 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 |---|------|--------|-------|--------|
 | 1 | Transcribe | [`transcribe.py`](transcribe.py) | `video.mp4` | `transcript.json` |
 | 2 | Extract frames | [`extract_frames.py`](extract_frames.py) | `video.mp4` + segments | `frames/*.png`, `frames_manifest.json` |
-| 3 | Slide plan | [`slide_plan.py`](slide_plan.py) | transcript + manifest (+ vision frames) | `slide_plan.json` |
-| 4 | Illustrations | [`generate_illustrations.py`](generate_illustrations.py) | `SlidePlan` | `illustrations/*.png` |
+| 3 | Slide plan | [`slide_plan.py`](slide_plan.py) | transcript + manifest (+ optional vision frames) | `slide_plan.json` |
+| 4 | Illustrations | [`generate_illustrations.py`](generate_illustrations.py) | (Skipped — no longer used) | — |
 | 5 | Render | [`render_slides.py`](render_slides.py) | plan + frames + illustrations | `rendered_slides/*.png`, `html_debug/*.html` |
 | 6 | Assemble | [`build_pptx.py`](build_pptx.py) | rendered PNGs | `output.pptx` |
 
@@ -129,7 +129,7 @@ Two entry points: **Web UI** (FastAPI) and **CLI** (argparse). Both drive the sa
 | [`transcribe.py`](transcribe.py) | `faster-whisper` model loading + streaming transcription → `{language, duration, segments[{start, end, text}]}` |
 | [`extract_frames.py`](extract_frames.py) | FFmpeg single-frame extraction via `-ss` seek; two strategies: `segment` (one frame per transcript segment) and `interval` (every N seconds); `prepare_frames_for_vision()` resizes + base64-encodes for OpenAI Vision API |
 | [`slide_plan.py`](slide_plan.py) | Pydantic models (`SlidePlan`, `SlideSpec`, `VocabItem`, `DialogueLine`); system prompt for pedagogically ordered slides; OpenAI chat completion with JSON mode; Vision API multi-modal messages; frame_index clamping |
-| [`generate_illustrations.py`](generate_illustrations.py) | Collects DALL-E prompts only from `vocabulary` and `moral_lesson` slide types; SHA-1 dedup; on-disk caching; `map_illustrations_to_plan()` builds lookup for the renderer |
+| [`generate_illustrations.py`](generate_illustrations.py) | (Legacy) DALL-E generation — no longer called by the pipeline |
 | [`render_slides.py`](render_slides.py) | Jinja2 `Environment` loading `templates/`; per-slide context builders; image → base64 data URI embedding; Playwright async screenshot loop (1920×1080); HTML debug output |
 | [`build_pptx.py`](build_pptx.py) | `build_presentation_from_images()` — embeds pre-rendered PNGs as full-slide pictures; `build_presentation_legacy()` — original python-pptx text-based renderer (fallback) |
 
@@ -144,10 +144,10 @@ Slide templates in [`templates/`](templates/) extend [`base.html`](templates/bas
 | 3 | [`story_intro.html`](templates/story_intro.html) | Characters & setting (2-3 bullets) + frame |
 | 4 | [`plot_summary.html`](templates/plot_summary.html) | Chronological steps with arrow flow + frame |
 | 5 | [`key_scene.html`](templates/key_scene.html) | Coolest moment + dialogue bubbles + frame |
-| 6 | [`vocabulary.html`](templates/vocabulary.html) | 4-6 word cards in 2×N grid; DALL-E per-word illustration + frame |
+| 6 | [`vocabulary.html`](templates/vocabulary.html) | 4-6 word cards in 2×N grid; frame |
 | 7 | [`key_phrases.html`](templates/key_phrases.html) | Fun phrases as colorful boxes + frame |
 | 8 | [`comprehension.html`](templates/comprehension.html) | Q&A quiz pairs + frame |
-| 9 | [`moral_lesson.html`](templates/moral_lesson.html) | Big takeaway card; DALL-E slide illustration + frame |
+| 9 | [`moral_lesson.html`](templates/moral_lesson.html) | Big takeaway card; frame |
 | 10 | [`discussion.html`](templates/discussion.html) | "What about you?" prompts + frame |
 
 ### Web UI pages
@@ -195,7 +195,6 @@ ProjectMeta
 │   ├── openai_model, reasoning_effort, openai_temperature
 │   ├── max_slides, max_frames, frame_strategy, interval_seconds, frame_offset
 │   ├── audience, use_vision, max_vision_frames
-│   └── no_illustrations, dalle_model
 ├── pipeline: dict[str, StepState]
 │   └── status (pending | running | done | error), started_at, completed_at, message
 └── error_message: str | None

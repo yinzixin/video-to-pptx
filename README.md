@@ -1,6 +1,6 @@
 # Cartoon video → teaching slides (PPTX)
 
-Generate pedagogically structured English teaching PowerPoints from animated video episodes. The pipeline transcribes the audio, extracts key frames, sends both transcript and images to OpenAI (Vision API), generates DALL-E cartoon illustrations, renders beautifully styled HTML slides via Playwright, and assembles them into a PPTX.
+Generate pedagogically structured English teaching PowerPoints from animated video episodes. The pipeline transcribes the audio, extracts key frames, sends the transcript to OpenAI, renders beautifully styled HTML slides via Playwright, and assembles them into a PPTX.
 
 ## Architecture
 
@@ -22,7 +22,7 @@ Generate pedagogically structured English teaching PowerPoints from animated vid
 │   1. transcribe  ─► transcript.json                              │
 │   2. frames      ─► frames/ + frames_manifest.json               │
 │   3. plan        ─► slide_plan.json                              │
-│   4. illustrations ─► illustrations/*.png (DALL-E)               │
+│   4. illustrations ─► (skipped — no longer used)               │
 │   5. render      ─► slides/*.png + html_debug/*.html             │
 │   6. pptx        ─► lesson.pptx                                 │
 ├──────────────────────────────────────────────────────────────────┤
@@ -42,7 +42,7 @@ Generate pedagogically structured English teaching PowerPoints from animated vid
 | `transcribe.py` | Audio → text via faster-whisper |
 | `extract_frames.py` | FFmpeg frame extraction (segment or interval strategy) + Vision API prep |
 | `slide_plan.py` | OpenAI GPT structured output → `SlidePlan` (Pydantic models) |
-| `generate_illustrations.py` | DALL-E image generation with prompt dedup and caching |
+| `generate_illustrations.py` | (Legacy) DALL-E image generation — no longer called by the pipeline |
 | `render_slides.py` | Jinja2 HTML templates + Playwright screenshots → 1920×1080 PNGs |
 | `build_pptx.py` | Assembles rendered PNGs into a PowerPoint file |
 
@@ -57,26 +57,19 @@ All templates extend `base.html` (shared layout, fonts, and CSS). The presentati
 | 3 | `story_intro.html` | Must have | Characters and setting (2-3 bullets) | Video frame |
 | 4 | `plot_summary.html` | Must have | Chronological steps with arrow flow | Video frame |
 | 5 | `key_scene.html` | Must have (1-2) | Coolest moment + dialogue bubbles | Video frame |
-| 6 | `vocabulary.html` | Must have | 4-6 word cards in a 2×N grid | DALL-E per-word illustration + video frame |
+| 6 | `vocabulary.html` | Must have | 4-6 word cards in a 2×N grid | Video frame |
 | 7 | `key_phrases.html` | Nice to have | Fun phrases as colorful boxes | Video frame |
 | 8 | `comprehension.html` | Must have | Q&A quiz pairs | Video frame |
-| 9 | `moral_lesson.html` | Must have | Big takeaway in a decorative card | DALL-E slide illustration + video frame |
+| 9 | `moral_lesson.html` | Must have | Big takeaway in a decorative card | Video frame |
 | 10 | `discussion.html` | Nice to have | "What about you?" prompts | Video frame |
-
-### Illustration generation
-
-DALL-E illustrations are only generated for slide types that actually render them — `vocabulary` (per-word images) and `moral_lesson` (slide-level image). Other slide types rely exclusively on extracted video frames. This avoids unnecessary DALL-E API calls for templates that would discard the result.
-
-Prompts are deduplicated by SHA-1 hash and cached on disk, so re-runs reuse existing images.
 
 ## Pipeline steps
 
 1. **Transcribe** — faster-whisper extracts text with timestamps
 2. **Extract frames** — FFmpeg captures key frames from the video
-3. **Slide plan** — OpenAI GPT (+ Vision API) designs the lesson structure
-4. **Illustrations** — DALL-E 3 generates cartoon images for vocabulary words and moral lesson slides
-5. **Render** — Jinja2 templates + Playwright produce 1920×1080 PNGs
-6. **Assemble** — python-pptx embeds the PNGs as slides
+3. **Slide plan** — OpenAI GPT designs the lesson structure (optionally with Vision API)
+4. **Render** — Jinja2 templates + Playwright produce 1920×1080 PNGs
+5. **Assemble** — python-pptx embeds the PNGs as slides
 
 ## Web UI
 
@@ -101,7 +94,7 @@ python -m uvicorn app:app --reload
 python cartoon_to_slides.py --video input/1.mp4 --out output/lesson.pptx
 ```
 
-Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For other models, **`--openai-temperature`** applies (default `0.6`).
+Default slide model is **`gpt-4.1`** with **`--openai-temperature=0.6`** (default). For `gpt-5.*` models, **`--reasoning-effort`** applies instead of temperature.
 
 ### Key options
 
@@ -109,10 +102,8 @@ Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For oth
 |---|---|
 | `--whisper-device` | Whisper device: `auto` (default), `cuda`, or `cpu` |
 | `--compute-type` | Compute precision (default: auto — `float16` for cuda, `int8` for cpu) |
-| `--no-illustrations` | Skip DALL-E image generation (faster, cheaper) |
-| `--dalle-model` | DALL-E model to use (default: `dall-e-3`) |
 | `--legacy-renderer` | Use the original python-pptx text renderer |
-| `--no-vision` | Disable Vision API (text-only slide planning) |
+| `--use-vision` | Enable Vision API (disabled by default) |
 | `--max-vision-frames` | Max frames for Vision API (default: 8) |
 | `--audience` | Learner description, e.g. `"kids aged 8-10, A2"` |
 | `--max-slides` | Maximum content slides (default: 12) |
@@ -121,14 +112,14 @@ Default slide model is **`gpt-5.4`** with **`reasoning_effort=medium`**. For oth
 
 ### All options
 
-`--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--openai-model`, `--reasoning-effort` (`none|low|medium|high|xhigh`, gpt-5.* only), `--openai-temperature`, `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--no-illustrations`, `--dalle-model`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
+`--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--openai-model`, `--reasoning-effort` (`none|low|medium|high|xhigh`, gpt-5.* only), `--openai-temperature`, `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
 
 ## Setup
 
 1. Install [FFmpeg](https://ffmpeg.org/) and Python 3.10+.
 2. `pip install -r requirements.txt` (PyTorch: use CPU index from the Dockerfile if needed.)
 3. `playwright install chromium` (for the rich renderer)
-4. Set your OpenAI API key (required for slide planning, Vision API, and DALL-E illustrations):
+4. Set your OpenAI API key (required for slide planning):
 
    ```bash
    # Option A — export directly (Linux / macOS / Git Bash)
@@ -181,8 +172,5 @@ GPU acceleration uses `float16` compute by default (vs `int8` on CPU) and provid
 
 ### Cost estimate per lesson
 
-- OpenAI GPT (text + vision): ~$0.05–0.15
-- DALL-E 3 illustrations: ~$0.08–0.16 (2-4 images for vocabulary + moral lesson)
-- Total: ~$0.15–0.30
-
-Use `--no-illustrations` to skip DALL-E and reduce cost to ~$0.05–0.15.
+- OpenAI GPT (text): ~$0.01–0.05
+- Total: ~$0.01–0.05

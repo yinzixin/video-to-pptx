@@ -163,29 +163,9 @@ def _step_illustrations(
     work: str,
     plan: Any,
     cb: ProgressCallback,
-) -> dict[str, Any] | None:
-    from generate_illustrations import generate_illustrations, map_illustrations_to_plan
-
-    cfg = meta.config
-    if cfg.no_illustrations:
-        set_step_done(meta, PipelineStep.ILLUSTRATIONS, "Skipped (no_illustrations)")
-        cb(PipelineStep.ILLUSTRATIONS, "done", "Skipped")
-        return None
-
-    cb(PipelineStep.ILLUSTRATIONS, "running", f"Generating with {cfg.dalle_model}…")
-    set_step_running(meta, PipelineStep.ILLUSTRATIONS, f"DALL-E {cfg.dalle_model}")
-    t0 = time.perf_counter()
-
-    illust_dir = os.path.join(work, "illustrations")
-    illustrations = generate_illustrations(
-        plan, illust_dir, dalle_model=cfg.dalle_model
-    )
-    illustration_map = map_illustrations_to_plan(plan, illustrations)
-
-    msg = f"{len(illustrations)} images in {_fmt(time.perf_counter() - t0)}"
-    set_step_done(meta, PipelineStep.ILLUSTRATIONS, msg)
-    cb(PipelineStep.ILLUSTRATIONS, "done", msg)
-    return illustration_map
+) -> None:
+    set_step_done(meta, PipelineStep.ILLUSTRATIONS, "Skipped (illustrations removed)")
+    cb(PipelineStep.ILLUSTRATIONS, "done", "Skipped")
 
 
 def _step_render(
@@ -193,7 +173,6 @@ def _step_render(
     work: str,
     plan: Any,
     manifest: dict[str, Any],
-    illustration_map: dict[str, Any] | None,
     video_basename: str,
     cb: ProgressCallback,
 ) -> list[str]:
@@ -205,7 +184,7 @@ def _step_render(
 
     rendered_dir = os.path.join(work, "rendered_slides")
     slide_images = render_slides(
-        plan, manifest, illustration_map, video_basename, rendered_dir
+        plan, manifest, None, video_basename, rendered_dir
     )
 
     msg = f"{len(slide_images)} slides in {_fmt(time.perf_counter() - t0)}"
@@ -273,7 +252,6 @@ def run_pipeline(
     transcript: dict[str, Any] | None = None
     manifest: dict[str, Any] | None = None
     plan: SlidePlan | None = None
-    illustration_map: dict[str, Any] | None = None
     slide_images: list[str] | None = None
 
     transcript_path = os.path.join(work, "transcript.json")
@@ -304,7 +282,7 @@ def run_pipeline(
 
         # Illustrations
         if start_idx <= steps.index(PipelineStep.ILLUSTRATIONS):
-            illustration_map = _step_illustrations(meta, work, plan, cb)
+            _step_illustrations(meta, work, plan, cb)
         else:
             set_step_done(meta, PipelineStep.ILLUSTRATIONS, "Reusing existing")
             cb(PipelineStep.ILLUSTRATIONS, "done", "Reusing existing")
@@ -312,7 +290,7 @@ def run_pipeline(
         # Render
         if start_idx <= steps.index(PipelineStep.RENDER):
             slide_images = _step_render(
-                meta, work, plan, manifest, illustration_map, video_basename, cb
+                meta, work, plan, manifest, video_basename, cb
             )
         else:
             rendered_dir = os.path.join(work, "rendered_slides")

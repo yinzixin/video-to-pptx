@@ -52,7 +52,7 @@ class PipelineConfig(BaseModel):
     whisper_device: str = Field(
         default_factory=lambda: os.environ.get("WHISPER_DEVICE", "auto"),
     )
-    openai_model: str = "gpt-5.4"
+    openai_model: str = "gpt-4.1"
     reasoning_effort: str = "medium"
     openai_temperature: float = 0.6
     max_slides: int = 12
@@ -61,10 +61,8 @@ class PipelineConfig(BaseModel):
     interval_seconds: float = 30.0
     frame_offset: float = 0.25
     audience: str | None = None
-    use_vision: bool = True
+    use_vision: bool = False
     max_vision_frames: int = 8
-    no_illustrations: bool = False
-    dalle_model: str = "dall-e-3"
 
 
 class ProjectMeta(BaseModel):

@@ -37,7 +37,7 @@ class VocabItem(BaseModel):
     definition: str = ""
     example: str = Field("", description="Sentence from the episode")
     illustration_prompt: str = Field(
-        "", description="Short DALL-E prompt for a cartoon illustration of this word"
+        "", description="(unused) Illustration prompt placeholder"
     )
 
 
@@ -54,7 +54,7 @@ class SlideSpec(BaseModel):
     scene_dialogue: list[DialogueLine] | None = None
     teacher_notes: str | None = None
     illustration_prompt: str = Field(
-        "", description="Short DALL-E prompt for a cartoon illustration for this slide"
+        "", description="(unused) Illustration prompt placeholder"
     )
     frame_index: int = Field(
         0, ge=0, description="Index into the frames list (0‑based)"
@@ -193,33 +193,6 @@ dialogue density), follow this rule strictly:
   and different dialogue excerpts so the whole story is covered visually.
 
 ─────────────────────────────────────────────────────
-ILLUSTRATION PROMPTS — BIG, BOLD, SUPER CUTE!
-─────────────────────────────────────────────────────
-
-EVERY slide type should have an `illustration_prompt` — this is the most \
-important part! The illustration will be shown LARGE on the slide.
-
-For EVERY vocabulary word, also add an `illustration_prompt`.
-
-Style rule — ALWAYS end every prompt with this: \
-"adorable chibi cartoon style, big expressive eyes, rounded shapes, \
-pastel and bright candy colors, white background, no text, \
-kawaii, sticker‑style, for young children".
-
-Make prompts DESCRIPTIVE so the generated image tells the story by itself. \
-Include character actions, emotions, and scene details.
-
-Examples:
-- "a happy blue puppy frozen like a statue with snowflakes around it, \
-adorable chibi cartoon style, big expressive eyes, rounded shapes, \
-pastel and bright candy colors, white background, no text, kawaii, \
-sticker‑style, for young children"
-- "two kids laughing and running in a sunny backyard, adorable chibi \
-cartoon style, big expressive eyes, rounded shapes, pastel and bright \
-candy colors, white background, no text, kawaii, sticker‑style, \
-for young children"
-
-─────────────────────────────────────────────────────
 RULES
 ─────────────────────────────────────────────────────
 • ONLY use words and events from the transcript — never make up stuff.
@@ -317,8 +290,6 @@ def build_user_payload(
         "  - `scene_dialogue` (array, key_scene slides only): "
         "[{speaker, line}]\n"
         "  - `teacher_notes` (string, optional)\n"
-        "  - `illustration_prompt` (string, optional): DALL-E prompt for a "
-        "cartoon illustration of the slide concept\n"
         "  - `frame_index` (int)\n"
     )
     return "\n".join(parts)
@@ -365,7 +336,7 @@ def generate_slide_plan(
     transcript_payload: dict[str, Any],
     frames_manifest: dict[str, Any],
     *,
-    model: str = "gpt-5.4",
+    model: str = "gpt-4.1",
     max_slides: int = 12,
     audience: str | None = None,
     api_key: str | None = None,

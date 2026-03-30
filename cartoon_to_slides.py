@@ -16,7 +16,6 @@ from extract_frames import (
     load_manifest,
     prepare_frames_for_vision,
 )
-from generate_illustrations import generate_illustrations, map_illustrations_to_plan
 from render_slides import render_slides
 from slide_plan import generate_slide_plan
 
@@ -54,8 +53,8 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--openai-model",
-        default="gpt-5.4",
-        help="OpenAI chat model for slide planning (default: gpt-5.4)",
+        default="gpt-4.1",
+        help="OpenAI chat model for slide planning (default: gpt-4.1)",
     )
     p.add_argument(
         "--reasoning-effort",
@@ -112,34 +111,22 @@ def parse_args() -> argparse.Namespace:
         "--use-vision",
         dest="use_vision",
         action="store_true",
-        default=True,
+        default=False,
         help="Send key frames to OpenAI Vision API for richer story understanding "
-        "(default: enabled)",
+        "(default: disabled)",
     )
     vision_grp.add_argument(
         "--no-vision",
         dest="use_vision",
         action="store_false",
-        help="Disable Vision API — only transcript text is sent to the LLM",
+        help="Disable Vision API — only transcript text is sent to the LLM "
+        "(default)",
     )
     p.add_argument(
         "--max-vision-frames",
         type=int,
         default=8,
         help="Max frames to encode for Vision API (default: 8)",
-    )
-
-    # DALL-E illustrations
-    p.add_argument(
-        "--no-illustrations",
-        action="store_true",
-        default=False,
-        help="Skip DALL-E illustration generation (faster, cheaper)",
-    )
-    p.add_argument(
-        "--dalle-model",
-        default="dall-e-3",
-        help="DALL-E model for illustrations (default: dall-e-3)",
     )
 
     # Renderer choice
@@ -211,10 +198,6 @@ def main() -> int:
     print(
         f"  Vision:    {'enabled' if args.use_vision else 'disabled'}"
         f" (max_frames={args.max_vision_frames})",
-        flush=True,
-    )
-    print(
-        f"  DALL-E:    {'disabled' if args.no_illustrations else args.dalle_model}",
         flush=True,
     )
     print(f"  Renderer:  {renderer_name}", flush=True)
@@ -384,25 +367,6 @@ def main() -> int:
             flush=True,
         )
     else:
-        # --- 3b. DALL-E illustrations ---
-        illustration_map = None
-        if not args.no_illustrations:
-            step = "[3b/4] Illustrations (DALL-E)"
-            print(f"{step}: generating with {args.dalle_model!r}…", flush=True)
-            t_step = time.perf_counter()
-            illustrations_dir = os.path.join(work, "illustrations")
-            illustrations = generate_illustrations(
-                plan,
-                illustrations_dir,
-                dalle_model=args.dalle_model,
-            )
-            illustration_map = map_illustrations_to_plan(plan, illustrations)
-            print(
-                f"{step}: done in {_fmt_secs(time.perf_counter() - t_step)} "
-                f"({len(illustrations)} images)",
-                flush=True,
-            )
-
         # --- 3c+3d. Render HTML slides + Playwright screenshots ---
         step = "[3c/4] Render slides"
         print(f"{step}: rendering HTML + Playwright screenshots…", flush=True)
@@ -411,7 +375,7 @@ def main() -> int:
         slide_images = render_slides(
             plan,
             manifest,
-            illustration_map,
+            None,
             base,
             rendered_dir,
         )

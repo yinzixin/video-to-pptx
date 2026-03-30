@@ -203,7 +203,7 @@ async def api_create_project(request: Request):
     config: dict[str, Any] = {}
     for key in (
         "whisper_model", "whisper_device", "openai_model", "reasoning_effort",
-        "dalle_model", "audience", "frame_strategy",
+        "audience", "frame_strategy",
     ):
         val = form.get(key)
         if val:
@@ -222,8 +222,6 @@ async def api_create_project(request: Request):
                 config[key] = float(val)
             except ValueError:
                 pass
-    if form.get("no_illustrations"):
-        config["no_illustrations"] = True
     if form.get("no_vision"):
         config["use_vision"] = False
 
