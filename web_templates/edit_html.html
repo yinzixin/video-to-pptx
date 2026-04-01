@@ -75,13 +75,26 @@ function debounce(fn, ms) {
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
+function scalePreview() {
+  const wrapper = document.querySelector('.preview-frame-wrapper');
+  const iframe = document.getElementById('html-preview');
+  if (wrapper && iframe) {
+    const scale = wrapper.clientWidth / 1920;
+    iframe.style.transform = `scale(${scale})`;
+  }
+}
+
 function updatePreview(html) {
   const iframe = document.getElementById('html-preview');
   const doc = iframe.contentDocument || iframe.contentWindow.document;
   doc.open();
   doc.write(html);
   doc.close();
+  scalePreview();
 }
+
+window.addEventListener('resize', scalePreview);
+scalePreview();
 
 function showStatus(msg, isError) {
   const el = document.getElementById('editor-status');
