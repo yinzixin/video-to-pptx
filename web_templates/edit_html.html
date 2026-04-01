@@ -43,6 +43,16 @@
 </div>
 
 <div id="editor-status" class="editor-status"></div>
+
+<div class="modal-overlay" id="frame-picker-modal" onclick="closeFrameModal(event)">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2>Select Frame Image</h2>
+      <button class="btn-close" onclick="closeFrameModal()">&times;</button>
+    </div>
+    <div class="se-frame-grid" id="frame-picker-grid"></div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -50,6 +60,7 @@
 const PROJECT_ID = '{{ project.id }}';
 let currentIdx = {{ slides[0].index if slides else 0 }};
 let plan = null;
+let framesList = [];
 
 function showStatus(msg, isError) {
   const el = document.getElementById('editor-status');
@@ -91,6 +102,7 @@ function collectSlideFields() {
   const fields = {
     title: document.getElementById('se-title')?.value ?? spec.title,
     bullets: [...document.querySelectorAll('.se-bullet-input')].map(el => el.value),
+    frame_index: spec.frame_index,
   };
 
   if (spec.vocab_items) {
@@ -126,6 +138,7 @@ function applyFieldsToPlan() {
     const spec = plan.slides[currentIdx - 1];
     spec.title = f.title;
     spec.bullets = f.bullets;
+    spec.frame_index = f.frame_index;
     if (f.vocab_items) spec.vocab_items = f.vocab_items;
     if (f.scene_dialogue) spec.scene_dialogue = f.scene_dialogue;
     if (f.teacher_notes !== undefined) spec.teacher_notes = f.teacher_notes;
@@ -187,6 +200,50 @@ function buildDialogueEditor(lines) {
   return html;
 }
 
+function buildFramePreview(frameIndex) {
+  if (!framesList.length) return '';
+  const fr = framesList.find(f => f.index === frameIndex);
+  const src = fr && fr.exists ? `/api/projects/${PROJECT_ID}/assets/frames/${frameIndex}` : '';
+  const imgTag = src
+    ? `<img src="${src}" alt="Frame ${frameIndex}">`
+    : `<span class="frame-missing">No image</span>`;
+  return `<div class="se-field-group">
+    <label>Frame Image</label>
+    <div class="se-frame-current" onclick="openFrameModal()">
+      ${imgTag}
+      <span class="se-frame-change-hint">Click to change</span>
+    </div>
+  </div>`;
+}
+
+function openFrameModal() {
+  const grid = document.getElementById('frame-picker-grid');
+  const spec = plan.slides[currentIdx - 1];
+  let html = '';
+  framesList.forEach(fr => {
+    const selected = fr.index === spec.frame_index ? ' se-frame-selected' : '';
+    const src = fr.exists ? `/api/projects/${PROJECT_ID}/assets/frames/${fr.index}` : '';
+    html += `<button type="button" class="se-frame-thumb${selected}" onclick="pickFrame(${fr.index})"
+      title="Frame #${fr.index} (${(fr.timestamp_seconds || 0).toFixed(1)}s)">
+      ${fr.exists ? `<img src="${src}" alt="Frame ${fr.index}">` : `<span class="frame-missing">#${fr.index}</span>`}
+    </button>`;
+  });
+  grid.innerHTML = html;
+  document.getElementById('frame-picker-modal').classList.add('active');
+}
+
+function closeFrameModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('frame-picker-modal').classList.remove('active');
+}
+
+function pickFrame(idx) {
+  applyFieldsToPlan();
+  plan.slides[currentIdx - 1].frame_index = idx;
+  closeFrameModal();
+  renderEditor();
+}
+
 function renderEditor() {
   const container = document.getElementById('structured-editor');
   const badge = document.getElementById('slide-type-badge');
@@ -217,6 +274,8 @@ function renderEditor() {
         <textarea id="se-teacher-notes" class="se-textarea" rows="2">${escHtml(spec.teacher_notes || '')}</textarea>
       </div>`;
     }
+
+    html += buildFramePreview(spec.frame_index);
   }
 
   container.innerHTML = html;
@@ -317,13 +376,17 @@ async function saveAndPreview() {
 // ---- Init ----------------------------------------------------------------
 
 async function init() {
-  const resp = await fetch(`/api/projects/${PROJECT_ID}/assets/plan`);
-  if (!resp.ok) {
+  const [planResp, framesResp] = await Promise.all([
+    fetch(`/api/projects/${PROJECT_ID}/assets/plan`),
+    fetch(`/api/projects/${PROJECT_ID}/assets/frames`),
+  ]);
+  if (!planResp.ok) {
     document.getElementById('structured-editor').innerHTML =
       '<div class="se-loading">Could not load slide plan.</div>';
     return;
   }
-  plan = await resp.json();
+  plan = await planResp.json();
+  if (framesResp.ok) framesList = await framesResp.json();
   renderEditor();
 
   const htmlResp = await fetch(`/api/projects/${PROJECT_ID}/assets/slides/${currentIdx}/html`);

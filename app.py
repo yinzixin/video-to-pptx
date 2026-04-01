@@ -595,6 +595,8 @@ async def api_preview_slide(project_id: str, idx: int, request: Request):
             spec.scene_dialogue = [DialogueLine.model_validate(d) for d in body["scene_dialogue"]]
         if "teacher_notes" in body:
             spec.teacher_notes = body["teacher_notes"]
+        if "frame_index" in body:
+            spec.frame_index = int(body["frame_index"])
 
     html = render_single_slide(idx, plan, frames_manifest, video_basename)
     return JSONResponse({"html": html})
