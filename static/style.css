@@ -387,6 +387,96 @@ a:hover { text-decoration: underline; }
 .frame-idx { font-weight: 600; }
 .frame-time { color: var(--text-muted); }
 
+/* ---- Structured Editor ---- */
+.structured-editor {
+  padding: .75rem;
+  overflow-y: auto;
+  max-height: calc(100vh - 300px);
+  min-height: 400px;
+}
+.se-loading { padding: 2rem; text-align: center; color: var(--text-muted); }
+
+.se-field-group { margin-bottom: 1rem; }
+.se-field-group > label {
+  display: block;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: .35rem;
+}
+
+.se-input {
+  width: 100%;
+  padding: .45rem .65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  background: var(--surface);
+  transition: border-color .15s;
+}
+.se-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.se-input-sm { font-size: .82rem; padding: .35rem .5rem; }
+
+.se-textarea {
+  width: 100%;
+  padding: .45rem .65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--surface);
+  transition: border-color .15s;
+}
+.se-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+
+.se-bullet-item {
+  display: flex;
+  gap: .35rem;
+  align-items: center;
+  margin-bottom: .35rem;
+}
+.se-bullet-item .se-input { flex: 1; }
+
+.se-remove-btn { flex-shrink: 0; line-height: 1; }
+
+.se-vocab-row {
+  display: grid;
+  grid-template-columns: 1.2fr .6fr 2fr 2fr auto;
+  gap: .35rem;
+  align-items: center;
+  margin-bottom: .35rem;
+}
+
+.se-dialogue-row {
+  display: grid;
+  grid-template-columns: 1fr 3fr auto;
+  gap: .35rem;
+  align-items: center;
+  margin-bottom: .35rem;
+}
+
+.slide-type-badge {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 99px;
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.se-actions {
+  padding: .75rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
 /* ---- Empty State ---- */
 .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
 

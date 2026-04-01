@@ -500,7 +500,104 @@ async def api_update_plan(project_id: str, request: Request):
     body = await request.json()
     with open(path, "w", encoding="utf-8") as f:
         f.write(json.dumps(body, indent=2, ensure_ascii=False))
+
+    _regenerate_html_debug(work, body)
+
     return JSONResponse({"ok": True})
+
+
+def _load_plan_and_manifest(work: str):
+    """Load slide_plan.json and frames_manifest.json from a project dir."""
+    from slide_plan import SlidePlan
+
+    plan_path = os.path.join(work, "slide_plan.json")
+    if not os.path.isfile(plan_path):
+        raise HTTPException(404, "slide_plan.json not found")
+    with open(plan_path, encoding="utf-8") as f:
+        plan_data = json.load(f)
+    plan = SlidePlan.model_validate(plan_data)
+
+    manifest_path = os.path.join(work, "frames", "frames_manifest.json")
+    frames_manifest: dict[str, Any] = {"frames": []}
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, encoding="utf-8") as f:
+            frames_manifest = json.load(f)
+
+    video_basename = "video"
+    video_path = os.path.join(work, "video.mp4")
+    if os.path.isfile(video_path):
+        video_basename = os.path.splitext(os.path.basename(video_path))[0]
+
+    return plan, plan_data, frames_manifest, video_basename
+
+
+def _regenerate_html_debug(work: str, plan_dict: dict[str, Any]) -> None:
+    """Re-render all HTML debug files from plan data (no screenshots)."""
+    from render_slides import render_single_slide
+    from slide_plan import SlidePlan
+
+    plan = SlidePlan.model_validate(plan_dict)
+
+    manifest_path = os.path.join(work, "frames", "frames_manifest.json")
+    frames_manifest: dict[str, Any] = {"frames": []}
+    if os.path.isfile(manifest_path):
+        with open(manifest_path, encoding="utf-8") as f:
+            frames_manifest = json.load(f)
+
+    video_basename = "video"
+    video_path = os.path.join(work, "video.mp4")
+    if os.path.isfile(video_path):
+        video_basename = os.path.splitext(os.path.basename(video_path))[0]
+
+    html_dir = os.path.join(work, "rendered_slides", "html_debug")
+    os.makedirs(html_dir, exist_ok=True)
+
+    total = 1 + len(plan.slides)
+    for idx in range(total):
+        html = render_single_slide(idx, plan, frames_manifest, video_basename)
+        with open(os.path.join(html_dir, f"slide_{idx:03d}.html"), "w",
+                  encoding="utf-8") as f:
+            f.write(html)
+
+
+@app.post("/api/projects/{project_id}/preview-slide/{idx}")
+async def api_preview_slide(project_id: str, idx: int, request: Request):
+    """Render a single slide from plan data and return its HTML."""
+    from render_slides import render_single_slide
+    from slide_plan import SlidePlan
+
+    _get_project_or_404(project_id)
+    work = project_dir(project_id)
+
+    body = await request.json()
+
+    plan, plan_data, frames_manifest, video_basename = _load_plan_and_manifest(work)
+
+    if idx == 0:
+        if "lesson_title" in body:
+            plan.lesson_title = body["lesson_title"]
+        if "story_summary" in body:
+            plan.story_summary = body["story_summary"]
+    else:
+        slide_idx = idx - 1
+        if slide_idx < 0 or slide_idx >= len(plan.slides):
+            raise HTTPException(404, "Slide index out of range")
+        spec = plan.slides[slide_idx]
+        if "title" in body:
+            spec.title = body["title"]
+        if "bullets" in body:
+            spec.bullets = body["bullets"]
+        if "vocab_items" in body and spec.vocab_items is not None:
+            from slide_plan import VocabItem
+            spec.vocab_items = [VocabItem.model_validate(v) for v in body["vocab_items"]]
+        if "scene_dialogue" in body and spec.scene_dialogue is not None:
+            from slide_plan import DialogueLine
+            spec.scene_dialogue = [DialogueLine.model_validate(d) for d in body["scene_dialogue"]]
+        if "teacher_notes" in body:
+            spec.teacher_notes = body["teacher_notes"]
+
+    html = render_single_slide(idx, plan, frames_manifest, video_basename)
+    return JSONResponse({"html": html})
 
 
 @app.get("/api/projects/{project_id}/assets/raw-response")

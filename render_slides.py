@@ -152,6 +152,39 @@ def _build_overview_context(plan: SlidePlan) -> dict[str, Any]:
     }
 
 
+def render_single_slide(
+    rendered_index: int,
+    plan: SlidePlan,
+    frames_manifest: dict[str, Any],
+    video_basename: str,
+    illustration_map: dict[str, Any] | None = None,
+) -> str:
+    """Render one slide to an HTML string.
+
+    *rendered_index* uses the same numbering as the output files:
+    0 = title slide, 1..N = plan.slides[0..N-1].
+    """
+    env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=False)
+
+    if rendered_index == 0:
+        tpl = env.get_template("title.html")
+        return tpl.render(**_build_title_context(plan, frames_manifest, video_basename))
+
+    slide_idx = rendered_index - 1
+    if slide_idx < 0 or slide_idx >= len(plan.slides):
+        raise IndexError(f"Slide index {rendered_index} out of range")
+
+    spec = plan.slides[slide_idx]
+    tpl_name = f"{spec.slide_type}.html"
+    try:
+        tpl = env.get_template(tpl_name)
+    except Exception:
+        tpl = env.get_template("story_intro.html")
+
+    ctx = _build_slide_context(slide_idx, plan, frames_manifest, illustration_map)
+    return tpl.render(**ctx)
+
+
 def _render_html_slides(
     plan: SlidePlan,
     frames_manifest: dict[str, Any],
