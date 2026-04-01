@@ -466,11 +466,16 @@ def _episode_context(
     }
 
 
-def _supports_reasoning_effort(provider_name: str) -> bool:
+_REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
+
+
+def _model_supports_reasoning_effort(provider_name: str, model: str) -> bool:
     try:
-        return get_provider(provider_name).supports_reasoning_effort
+        if not get_provider(provider_name).supports_reasoning_effort:
+            return False
     except ValueError:
         return False
+    return any(model.startswith(p) for p in _REASONING_MODEL_PREFIXES)
 
 
 # ---------------------------------------------------------------------------
@@ -636,18 +641,12 @@ def generate_slide_plan(
         "messages": messages,
         "response_format": {"type": "json_object"},
     }
-    if provider_info.supports_reasoning_effort and _supports_reasoning_effort(provider):
+    if _model_supports_reasoning_effort(provider, model):
         create_kwargs["reasoning_effort"] = reasoning_effort or "medium"
     else:
         create_kwargs["temperature"] = temperature
 
-    try:
-        resp = client.chat.completions.create(**create_kwargs)
-    except TypeError:
-        create_kwargs.pop("reasoning_effort", None)
-        if "temperature" not in create_kwargs:
-            create_kwargs["temperature"] = temperature
-        resp = client.chat.completions.create(**create_kwargs)
+    resp = client.chat.completions.create(**create_kwargs)
 
     raw = resp.choices[0].message.content
     if not raw:
