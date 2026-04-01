@@ -9,6 +9,10 @@ import shutil
 import threading
 from typing import Any
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -210,7 +214,7 @@ async def api_create_project(request: Request):
     config: dict[str, Any] = {}
     for key in (
         "whisper_model", "whisper_device", "llm_provider", "llm_model",
-        "reasoning_effort", "audience", "frame_strategy",
+        "llm_api_key", "reasoning_effort", "audience", "frame_strategy",
     ):
         val = form.get(key)
         if val:
@@ -227,6 +231,7 @@ async def api_create_project(request: Request):
         "interval_seconds",
         "frame_offset",
         "time_jitter_seconds",
+        "skip_intro_seconds",
     ):
         val = form.get(key)
         if val:

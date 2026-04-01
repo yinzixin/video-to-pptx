@@ -13,6 +13,10 @@ import time
 from pathlib import Path
 from typing import Iterable
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from build_pptx import build_presentation_from_images, build_presentation_legacy
 from extract_frames import (
     FrameStrategy,
@@ -125,6 +129,13 @@ def parse_args() -> argparse.Namespace:
         default=0.75,
         help="Random ±seconds applied to each frame time so runs differ (default: 0.75; "
         "0 disables)",
+    )
+    p.add_argument(
+        "--skip-intro-seconds",
+        type=float,
+        default=5.0,
+        help="Skip the first N seconds of video to avoid intros/warnings/logos "
+        "(default: 5.0; 0 disables)",
     )
     p.add_argument(
         "--audience",
@@ -334,6 +345,7 @@ def run_pipeline(video: str, work: str, out_pptx: str, args: argparse.Namespace)
             time_offset=args.frame_offset,
             time_jitter_seconds=args.time_jitter_seconds,
             max_frames=max_frames,
+            skip_intro_seconds=args.skip_intro_seconds,
         )
         manifest = load_manifest(manifest_path)
         nfr = len(manifest.get("frames", []))

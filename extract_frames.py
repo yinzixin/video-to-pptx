@@ -15,7 +15,7 @@ from typing import Any, Literal
 FrameStrategy = Literal["segment", "interval"]
 
 _BLACK_SKIP_STEP = 1.0  # seconds to advance when a black frame is detected
-_BLACK_SKIP_MAX = 5.0   # max total seconds to advance looking for non-black frame
+_BLACK_SKIP_MAX = 10.0  # max total seconds to advance looking for non-black frame
 _EDGE_MARGIN = 0.05     # keep sampled times inside segment / file bounds
 
 
@@ -67,10 +67,14 @@ def _run_ffmpeg_ss(video_path: str, t_sec: float, out_path: str) -> None:
 
 def _is_black_frame(
     image_path: str,
-    pixel_threshold: int = 20,
-    black_ratio: float = 0.97,
+    pixel_threshold: int = 30,
+    black_ratio: float = 0.85,
 ) -> bool:
-    """Return True if the image is predominantly black (e.g. video intro)."""
+    """Return True if the image is predominantly black.
+
+    Catches pure-black frames as well as "nearly black" screens such as
+    DVD copyright warnings (white/yellow text on a black background).
+    """
     try:
         from PIL import Image
     except ImportError:
@@ -131,9 +135,10 @@ def _count_interval_extractions(
     duration: float,
     interval_seconds: float,
     max_frames: int | None,
+    skip_intro_seconds: float = 0.0,
 ) -> int:
     n = 0
-    t = 0.0
+    t = skip_intro_seconds
     while t < duration and (max_frames is None or n < max_frames):
         n += 1
         t += interval_seconds
@@ -150,13 +155,15 @@ def extract_frames(
     time_offset: float = 0.25,
     time_jitter_seconds: float = 0.75,
     max_frames: int | None = None,
+    skip_intro_seconds: float = 5.0,
     verbose: bool = True,
 ) -> tuple[list[FrameEntry], str]:
     """
     Extract PNG frames and write manifest JSON next to frames.
 
     - segment: one frame per segment at start + time_offset (capped by max_frames).
-    - interval: every interval_seconds from 0 until duration (capped by max_frames).
+      Segments starting before *skip_intro_seconds* are dropped.
+    - interval: every interval_seconds starting from *skip_intro_seconds*.
     - time_jitter_seconds: uniform random offset (seconds) applied per frame so
       repeated runs can capture different moments; clamped to segment/video bounds.
       Use 0 to disable.
@@ -176,14 +183,17 @@ def extract_frames(
                     flush=True,
                 )
             return entries, manifest_path
-        indices = list(range(len(segments)))
+        indices = [
+            i for i in range(len(segments))
+            if float(segments[i].get("start", 0)) >= skip_intro_seconds
+        ]
+        if not indices:
+            indices = list(range(len(segments)))
         if max_frames is not None and len(indices) > max_frames:
             step = max(1, len(indices) // max_frames)
             indices = indices[::step][:max_frames]
         total = len(indices)
-        duration: float | None = None
-        if time_jitter_seconds > 0:
-            duration = _probe_duration(video_path)
+        duration = _probe_duration(video_path)
         if verbose:
             jit_msg = (
                 f", jitter ±{time_jitter_seconds}s"
@@ -212,12 +222,10 @@ def extract_frames(
                     f"  [{n + 1}/{total}] t={t:.2f}s seg#{i} -> {name}",
                     flush=True,
                 )
-            if n == 0:
-                t = _extract_skip_black(
-                    video_path, t, out_path, verbose=verbose,
-                )
-            else:
-                _run_ffmpeg_ss(video_path, t, out_path)
+            t = _extract_skip_black(
+                video_path, t, out_path,
+                duration=duration, verbose=verbose,
+            )
             entries.append(
                 FrameEntry(
                     path=os.path.abspath(out_path),
@@ -228,7 +236,7 @@ def extract_frames(
     else:
         # interval — need duration
         duration = _probe_duration(video_path)
-        total = _count_interval_extractions(duration, interval_seconds, max_frames)
+        total = _count_interval_extractions(duration, interval_seconds, max_frames, skip_intro_seconds)
         t_hi_global = max(0.0, duration - _EDGE_MARGIN)
         if verbose:
             jit_msg = (
@@ -241,7 +249,7 @@ def extract_frames(
                 f"every {interval_seconds}s{jit_msg}, ~{total} frame(s)…",
                 flush=True,
             )
-        t = 0.0
+        t = skip_intro_seconds
         n = 0
         while t < duration and (max_frames is None or n < max_frames):
             name = f"frame_{n:05d}.png"
@@ -252,13 +260,10 @@ def extract_frames(
                     f"  [{n + 1}/{total}] t={t_use:.2f}s -> {name}",
                     flush=True,
                 )
-            if n == 0:
-                t_use = _extract_skip_black(
-                    video_path, t_use, out_path,
-                    duration=duration, verbose=verbose,
-                )
-            else:
-                _run_ffmpeg_ss(video_path, t_use, out_path)
+            t_use = _extract_skip_black(
+                video_path, t_use, out_path,
+                duration=duration, verbose=verbose,
+            )
             entries.append(
                 FrameEntry(
                     path=os.path.abspath(out_path),

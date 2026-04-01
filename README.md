@@ -129,7 +129,7 @@ Default LLM provider is **OpenAI** with model **`gpt-4.1`** and **`--llm-tempera
 
 ### All options
 
-`--input`, `--output`, `--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--llm-provider` (`openai|mimo`), `--llm-model` (alias `--openai-model`), `--reasoning-effort` (`none|low|medium|high|xhigh`), `--llm-temperature` (alias `--openai-temperature`), `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`.
+`--input`, `--output`, `--whisper-model`, `--whisper-device` (`auto|cuda|cpu`), `--compute-type` (`auto|float16|int8|int8_float16`), `--llm-provider` (`openai|mimo`), `--llm-model` (alias `--openai-model`), `--reasoning-effort` (`none|low|medium|high|xhigh`), `--llm-temperature` (alias `--openai-temperature`), `--max-slides`, `--frame-strategy segment|interval`, `--interval-seconds`, `--frame-offset`, `--audience`, `--use-vision / --no-vision`, `--max-vision-frames`, `--legacy-renderer`, `--skip-transcribe`, `--skip-frames`, `skip_intro_seconds`.
 
 ## Setup
 

@@ -97,6 +97,7 @@ def _step_frames(
         time_offset=cfg.frame_offset,
         time_jitter_seconds=cfg.time_jitter_seconds,
         max_frames=max_frames,
+        skip_intro_seconds=cfg.skip_intro_seconds,
     )
     manifest = load_manifest(manifest_path)
     nfr = len(manifest.get("frames", []))
@@ -136,6 +137,7 @@ def _step_plan(
         model=cfg.llm_model,
         max_slides=cfg.max_slides,
         audience=cfg.audience,
+        api_key=cfg.llm_api_key,
         reasoning_effort=cfg.reasoning_effort,
         temperature=cfg.llm_temperature,
         vision_frames=vision_frames,

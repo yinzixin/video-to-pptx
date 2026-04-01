@@ -54,6 +54,7 @@ class PipelineConfig(BaseModel):
     )
     llm_provider: str = "openai"
     llm_model: str = "gpt-4.1"
+    llm_api_key: str | None = None
     reasoning_effort: str = "medium"
     llm_temperature: float = 0.6
     max_slides: int = 12
@@ -62,6 +63,7 @@ class PipelineConfig(BaseModel):
     interval_seconds: float = 30.0
     frame_offset: float = 0.25
     time_jitter_seconds: float = 0.75
+    skip_intro_seconds: float = 5.0
     audience: str | None = None
     use_vision: bool = False
     max_vision_frames: int = 8
