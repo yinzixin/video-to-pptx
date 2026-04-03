@@ -85,9 +85,23 @@ def provider_names() -> list[str]:
     return sorted(PROVIDERS)
 
 
-def provider_choices() -> list[dict[str, str]]:
-    """Return provider info dicts for use in UI dropdowns."""
+def provider_choices() -> list[dict[str, str | list[str]]]:
+    """Return provider info dicts for use in UI dropdowns.
+
+    Xiaomi MiMo V2 is listed first so it appears as the default choice in
+    dropdowns when no explicit selection applies.
+    """
+    order = ("mimo", "openai")
+    names = [n for n in order if n in PROVIDERS] + sorted(
+        n for n in PROVIDERS if n not in order
+    )
     return [
-        {"name": p.name, "display_name": p.display_name, "default_model": p.default_model}
-        for p in PROVIDERS.values()
+        {
+            "name": p.name,
+            "display_name": p.display_name,
+            "default_model": p.default_model,
+            "available_models": p.available_models,
+        }
+        for n in names
+        for p in (PROVIDERS[n],)
     ]

@@ -56,8 +56,9 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--whisper-device",
-        default="auto",
-        help="Device for faster-whisper: auto, cuda, or cpu (default: auto)",
+        default=os.environ.get("WHISPER_DEVICE", "auto"),
+        help="Device for faster-whisper: auto, cuda, or cpu "
+        "(default: WHISPER_DEVICE env or auto)",
     )
     p.add_argument(
         "--compute-type",

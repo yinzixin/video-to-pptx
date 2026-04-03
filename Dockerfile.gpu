@@ -12,10 +12,13 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip
 
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu124
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# CUDA PyTorch must come *after* requirements: a transitive dep can pull torch from
+# PyPI and replace the cu124 wheel with +cpu, which makes torch.cuda.is_available()
+# false even inside an NVIDIA container.
+RUN pip install --no-cache-dir --force-reinstall torch --index-url https://download.pytorch.org/whl/cu124
 
 RUN playwright install --with-deps chromium
 

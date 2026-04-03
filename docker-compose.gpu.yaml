@@ -5,6 +5,10 @@ services:
       dockerfile: Dockerfile.gpu
     container_name: whisper_gpu
 
+    # Prefer this over deploy-only GPU hints; some Compose setups ignore deploy
+    # unless Swarm mode, so the container would get no GPU and auto → CPU.
+    gpus: all
+
     volumes:
       - .:/app
       - hf-cache:/root/.cache/huggingface

@@ -52,8 +52,8 @@ class PipelineConfig(BaseModel):
     whisper_device: str = Field(
         default_factory=lambda: os.environ.get("WHISPER_DEVICE", "auto"),
     )
-    llm_provider: str = "openai"
-    llm_model: str = "gpt-4.1"
+    llm_provider: str = "mimo"
+    llm_model: str = "mimo-v2-flash"
     llm_api_key: str | None = None
     reasoning_effort: str = "medium"
     llm_temperature: float = 0.6

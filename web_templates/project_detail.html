@@ -44,36 +44,43 @@
   </div>
 </section>
 
-<!-- Actions -->
-<section class="card">
+<!-- Actions (above video preview) -->
+<section class="card project-actions-card">
   <h2>Actions</h2>
+  {% if not has_video %}
   <div class="action-bar">
-    {% if not has_video %}
     <form method="POST" action="/api/projects/{{ project.id }}/upload" enctype="multipart/form-data" class="upload-form">
       <label class="btn btn-primary upload-label">
         Upload Video
         <input type="file" name="file" accept="video/*" onchange="this.form.submit()" hidden>
       </label>
     </form>
-    {% else %}
-    <button class="btn btn-primary" onclick="runPipeline('{{ project.id }}')" {% if is_running %}disabled{% endif %}>
-      {% if is_running %}Running...{% else %}Run Full Pipeline{% endif %}
-    </button>
-    {% endif %}
-
+  </div>
+  {% else %}
+  <div class="project-actions-toolbar">
+    <div class="toolbar-row toolbar-row-split">
+      <button type="button" id="btn-run-pipeline" class="btn btn-primary" onclick="openRunModal('full')" {% if is_running %}disabled{% endif %}>
+        {% if is_running %}Running...{% else %}Run Pipeline{% endif %}
+      </button>
+      <div class="toolbar-row-end">
+        {% if has_pptx %}
+        <a href="/api/projects/{{ project.id }}/download" class="btn btn-success">Download PPTX</a>
+        {% endif %}
+      </div>
+    </div>
     {% if has_plan %}
-    <button class="btn" onclick="runFrom('{{ project.id }}', 'render')" {% if is_running %}disabled{% endif %}>
-      Re-render Slides
-    </button>
-    <button class="btn" onclick="runFrom('{{ project.id }}', 'plan')" {% if is_running %}disabled{% endif %}>
-      Re-generate from Plan
-    </button>
-    {% endif %}
-
-    {% if has_pptx %}
-    <a href="/api/projects/{{ project.id }}/download" class="btn btn-success">Download PPTX</a>
+    <div class="toolbar-row toolbar-row-secondary action-bar">
+      <button type="button" class="btn" onclick="openRunModal('plan')" {% if is_running %}disabled{% endif %}>Re-generate Plan</button>
+      {% if slide_count > 0 %}
+      <a href="/projects/{{ project.id }}/edit/html" class="btn">Edit Slide</a>
+      {% endif %}
+      {% if frame_count > 0 %}
+      <a href="/projects/{{ project.id }}/edit/frames" class="btn">Manage Frames</a>
+      {% endif %}
+    </div>
     {% endif %}
   </div>
+  {% endif %}
 </section>
 
 <!-- Video Preview -->
@@ -84,22 +91,6 @@
     <source src="/api/projects/{{ project.id }}/assets/video" type="video/mp4">
   </video>
   <p class="text-muted">{{ project.video_filename or 'video.mp4' }}</p>
-</section>
-{% endif %}
-
-<!-- Edit Tools -->
-{% if has_plan %}
-<section class="card">
-  <h2>Edit &amp; Refine</h2>
-  <div class="action-bar">
-    <a href="/projects/{{ project.id }}/edit/plan" class="btn">Edit Slide Plan</a>
-    {% if slide_count > 0 %}
-    <a href="/projects/{{ project.id }}/edit/html" class="btn">Edit HTML Slides</a>
-    {% endif %}
-    {% if frame_count > 0 %}
-    <a href="/projects/{{ project.id }}/edit/frames" class="btn">Manage Frames</a>
-    {% endif %}
-  </div>
 </section>
 {% endif %}
 
@@ -117,6 +108,40 @@
   </div>
 </section>
 {% endif %}
+
+<!-- Run Settings Modal -->
+<div id="run-settings-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="run-modal-title">Run Pipeline</h2>
+      <button class="btn-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="setting-provider">LLM Provider</label>
+        <select id="setting-provider" onchange="onProviderChange()"></select>
+      </div>
+      <div class="form-group">
+        <label for="setting-model">LLM Model</label>
+        <select id="setting-model"></select>
+      </div>
+      <div class="form-group">
+        <label for="setting-max-slides">Max Slides</label>
+        <input type="number" id="setting-max-slides" min="1" max="50"
+          value="{{ project.config.max_slides }}">
+      </div>
+      <div class="form-group">
+        <label for="setting-audience">Target Audience</label>
+        <input type="text" id="setting-audience" placeholder="e.g. kids aged 8-10, A2"
+          value="{{ project.config.audience or '' }}">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="document.getElementById('run-settings-modal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary" id="run-modal-confirm" onclick="confirmRun()">Run</button>
+    </div>
+  </div>
+</div>
 
 <!-- Slide Full View Modal -->
 <div id="slide-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
@@ -136,6 +161,9 @@
 <script>
 const PROJECT_ID = '{{ project.id }}';
 const SLIDE_COUNT = {{ slide_count }};
+const CURRENT_PROVIDER = '{{ project.config.llm_provider }}';
+const CURRENT_MODEL = '{{ project.config.llm_model }}';
+const LLM_PROVIDERS = {{ llm_providers | tojson }};
 let currentSlide = 0;
 
 function showSlideModal(idx, total) {
@@ -161,6 +189,93 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') navigateSlide(1);
   if (e.key === 'Escape') modal.classList.remove('active');
 });
+
+// ---- Run settings modal ----
+
+let pendingRunMode = 'full'; // 'full' or a step name like 'plan'
+
+function effectiveProviderName() {
+  if (CURRENT_PROVIDER && LLM_PROVIDERS.some(p => p.name === CURRENT_PROVIDER)) {
+    return CURRENT_PROVIDER;
+  }
+  return 'mimo';
+}
+
+function buildProviderDropdown() {
+  const sel = document.getElementById('setting-provider');
+  const pick = effectiveProviderName();
+  sel.innerHTML = '';
+  LLM_PROVIDERS.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.name;
+    o.textContent = p.display_name;
+    if (p.name === pick) o.selected = true;
+    sel.appendChild(o);
+  });
+  onProviderChange();
+}
+
+function onProviderChange() {
+  const sel = document.getElementById('setting-provider');
+  const provider = LLM_PROVIDERS.find(p => p.name === sel.value);
+  if (!provider) return;
+  const modelSel = document.getElementById('setting-model');
+  modelSel.innerHTML = '';
+  let matched = false;
+  (provider.available_models || []).forEach(m => {
+    const o = document.createElement('option');
+    o.value = m;
+    o.textContent = m;
+    if (m === CURRENT_MODEL) {
+      o.selected = true;
+      matched = true;
+    }
+    modelSel.appendChild(o);
+  });
+  if (!matched && provider.default_model) {
+    for (const opt of modelSel.options) {
+      if (opt.value === provider.default_model) {
+        opt.selected = true;
+        break;
+      }
+    }
+  }
+}
+
+function openRunModal(mode) {
+  pendingRunMode = mode;
+  const title = document.getElementById('run-modal-title');
+  const confirmBtn = document.getElementById('run-modal-confirm');
+  if (mode === 'full') {
+    title.textContent = 'Run Pipeline';
+    confirmBtn.textContent = 'Run Pipeline';
+  } else {
+    title.textContent = 'Re-generate from Plan';
+    confirmBtn.textContent = 'Re-generate';
+  }
+  buildProviderDropdown();
+  document.getElementById('run-settings-modal').classList.add('active');
+}
+
+async function confirmRun() {
+  const settings = {
+    llm_provider: document.getElementById('setting-provider').value,
+    llm_model: document.getElementById('setting-model').value,
+    max_slides: parseInt(document.getElementById('setting-max-slides').value, 10) || 12,
+    audience: document.getElementById('setting-audience').value,
+  };
+  await fetch(`/api/projects/${PROJECT_ID}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  document.getElementById('run-settings-modal').classList.remove('active');
+  if (pendingRunMode === 'full') {
+    runPipeline(PROJECT_ID);
+  } else {
+    runFrom(PROJECT_ID, pendingRunMode);
+  }
+}
 
 // SSE progress listener
 {% if is_running %}

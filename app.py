@@ -130,6 +130,7 @@ async def page_project_detail(request: Request, project_id: str):
             "has_video": has_video,
             "is_running": is_running,
             "steps": PIPELINE_STEP_ORDER,
+            "llm_providers": provider_choices(),
         },
     )
 
@@ -277,6 +278,26 @@ async def api_upload_video(project_id: str, file: UploadFile):
 
 
 # ---- API: pipeline control -----------------------------------------------
+
+
+@app.put("/api/projects/{project_id}/settings")
+async def api_update_settings(project_id: str, request: Request):
+    """Persist user-editable project settings (audience, max_slides, llm)."""
+    meta = _get_project_or_404(project_id)
+    body = await request.json()
+    if "audience" in body:
+        meta.config.audience = body["audience"] or None
+    if "max_slides" in body:
+        try:
+            meta.config.max_slides = int(body["max_slides"])
+        except (ValueError, TypeError):
+            pass
+    if "llm_provider" in body and body["llm_provider"]:
+        meta.config.llm_provider = body["llm_provider"]
+    if "llm_model" in body and body["llm_model"]:
+        meta.config.llm_model = body["llm_model"]
+    update_project(meta)
+    return JSONResponse({"ok": True})
 
 
 @app.post("/api/projects/{project_id}/run")

@@ -213,6 +213,17 @@ a:hover { text-decoration: underline; }
 /* ---- Action Bar ---- */
 .action-bar { display: flex; gap: .5rem; flex-wrap: wrap; }
 
+.project-actions-toolbar { display: flex; flex-direction: column; gap: .75rem; }
+.toolbar-row-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.toolbar-row-end { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.toolbar-row-secondary { margin-top: 0; }
+
 /* ---- Upload Form ---- */
 .upload-form { display: inline; }
 .upload-label { cursor: pointer; }

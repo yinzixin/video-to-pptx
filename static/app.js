@@ -58,7 +58,7 @@ async function runPipeline(projectId) {
   const resp = await fetch(`/api/projects/${projectId}/run`, { method: 'POST' });
   if (resp.ok) {
     connectSSE(projectId);
-    const btn = document.querySelector('.btn-primary');
+    const btn = document.getElementById('btn-run-pipeline');
     if (btn) { btn.disabled = true; btn.textContent = 'Running...'; }
   } else {
     const err = await resp.json().catch(() => ({}));
