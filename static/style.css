@@ -284,12 +284,38 @@ a:hover { text-decoration: underline; }
   box-shadow: var(--shadow-md);
 }
 .modal-wide { max-width: 900px; }
+.modal.modal-wide.modal-slide-preview {
+  max-width: min(96vw, 1600px);
+  padding: 1rem 1.25rem;
+}
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .modal-header h2 { font-size: 1.2rem; }
+.modal-header-actions { display: flex; align-items: center; gap: .5rem; }
+.modal-slide-preview .modal-header-actions .btn-primary {
+  padding: .75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
 
 /* ---- Slide Viewer ---- */
 .slide-viewer { display: flex; align-items: center; gap: .5rem; }
 .slide-viewer img { width: 100%; border-radius: var(--radius); }
+.modal-slide-preview .slide-viewer { align-items: center; }
+.modal-slide-preview .slide-modal-img-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-slide-preview .slide-modal-img-wrap img {
+  max-width: 100%;
+  max-height: calc(90vh - 5rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
 .slide-nav {
   background: none; border: none; font-size: 2.5rem; cursor: pointer;
   color: var(--text-muted); padding: .5rem; flex-shrink: 0;

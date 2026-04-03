@@ -145,15 +145,20 @@
 
 <!-- Slide Full View Modal -->
 <div id="slide-modal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
-  <div class="modal modal-wide">
+  <div class="modal modal-wide modal-slide-preview">
     <div class="modal-header">
       <h2 id="slide-modal-title">Slide</h2>
-      <button class="btn-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+      <div class="modal-header-actions">
+        <a id="slide-modal-edit" class="btn btn-primary" href="/projects/{{ project.id }}/edit/html">Edit</a>
+        <button class="btn-close" onclick="this.closest('.modal-overlay').classList.remove('active')">&times;</button>
+      </div>
     </div>
     <div class="slide-viewer">
-      <button class="slide-nav slide-prev" onclick="navigateSlide(-1)">&#8249;</button>
-      <img id="slide-modal-img" src="" alt="Slide">
-      <button class="slide-nav slide-next" onclick="navigateSlide(1)">&#8250;</button>
+      <button type="button" class="slide-nav slide-prev" onclick="navigateSlide(-1)">&#8249;</button>
+      <div class="slide-modal-img-wrap">
+        <img id="slide-modal-img" src="" alt="Slide">
+      </div>
+      <button type="button" class="slide-nav slide-next" onclick="navigateSlide(1)">&#8250;</button>
     </div>
   </div>
 </div>
@@ -175,6 +180,9 @@ function showSlideModal(idx, total) {
 function updateSlideModal() {
   document.getElementById('slide-modal-title').textContent = `Slide ${currentSlide + 1} / ${SLIDE_COUNT}`;
   document.getElementById('slide-modal-img').src = `/api/projects/${PROJECT_ID}/assets/slides/${currentSlide}`;
+  const editLink = document.getElementById('slide-modal-edit');
+  editLink.href = `/projects/${PROJECT_ID}/edit/html?slide=${currentSlide}`;
+  editLink.setAttribute('aria-label', `Edit slide ${currentSlide + 1}`);
 }
 
 function navigateSlide(dir) {

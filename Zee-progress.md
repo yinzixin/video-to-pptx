@@ -1,5 +1,11 @@
 # Session compaction (Zee)
 
+## 2026-04-03 — Project detail: slide lightbox size + Edit deep link
+
+- **CSS:** `.modal-slide-preview` widens modal (`min(96vw, 1600px)`); `.slide-modal-img-wrap` + `object-fit: contain` / `max-height: calc(90vh - 5rem)` so full slide PNG is visible and large.
+- **`project_detail.html`:** Header actions: Edit link `#slide-modal-edit` → `/projects/{id}/edit/html?slide={n}`; `updateSlideModal()` sets `href` and `aria-label`.
+- **`edit_html.html`:** `MAX_SLIDE_IDX` from last slide tab; after `init()`, `?slide=` parsed, clamped, `selectSlide(n, tab)` if tab exists.
+
 ## 2026-04-01 — Dockerfile.gpu: PyTorch was +cpu inside GPU image
 
 - **Symptom:** `torch.cuda.is_available()` false in container; `torch.__version__` was `2.11.0+cpu` despite `nvidia-smi` OK on host and `gpus: all`.

@@ -58,6 +58,7 @@
 {% block scripts %}
 <script>
 const PROJECT_ID = '{{ project.id }}';
+const MAX_SLIDE_IDX = {{ slides[-1].index if slides else 0 }};
 let currentIdx = {{ slides[0].index if slides else 0 }};
 let plan = null;
 let framesList = [];
@@ -393,6 +394,16 @@ async function init() {
   if (htmlResp.ok) {
     const data = await htmlResp.json();
     setPreviewHtml(data.html);
+  }
+
+  const slideParam = new URLSearchParams(window.location.search).get('slide');
+  if (slideParam !== null) {
+    let n = parseInt(slideParam, 10);
+    if (!Number.isNaN(n)) {
+      n = Math.max(0, Math.min(MAX_SLIDE_IDX, n));
+      const tab = document.querySelector(`.slide-tab[data-idx="${n}"]`);
+      if (tab) selectSlide(n, tab);
+    }
   }
 }
 
